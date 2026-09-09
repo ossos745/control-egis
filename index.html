@@ -1,0 +1,2541 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>:root{color-scheme:light dark}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+
+
+<title>Control EGIS Maule · en vivo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231d3a5f'/%3E%3Ctext x='16' y='22' font-family='system-ui' font-size='15' font-weight='700' fill='white' text-anchor='middle'%3EEG%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#eef1f4; --surface:#ffffff; --surface-2:#f6f8fa; --surface-3:#eaeff3;
+  --ink:#0f161c; --ink-2:#4a5560; --ink-3:#7c8892;
+  --line:#dbe2e8; --line-2:#c2ccd5;
+  --accent:#1d4e76; --accent-ink:#ffffff; --accent-soft:#e2edf6; --accent-line:#a9c7de;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+  --good-soft:#e4f5e4; --warn-soft:#fdf3dd; --crit-soft:#fae4e4;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300;
+  --grid:#e6ebef; --axis:#c2ccd5;
+  --shadow:0 1px 2px rgba(15,22,28,.06), 0 8px 24px -12px rgba(15,22,28,.18);
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  color-scheme: dark;
+  --bg:#0b0f13; --surface:#141a20; --surface-2:#1a2128; --surface-3:#212a32;
+  --ink:#eef2f5; --ink-2:#a7b2bb; --ink-3:#77838c;
+  --line:#242e37; --line-2:#33404a;
+  --accent:#7fb2dd; --accent-ink:#08131c; --accent-soft:#152736; --accent-line:#2b4459;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+  --good-soft:#11291a; --warn-soft:#2e2513; --crit-soft:#2e1616;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300;
+  --grid:#212a32; --axis:#33404a;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+}}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0b0f13; --surface:#141a20; --surface-2:#1a2128; --surface-3:#212a32;
+  --ink:#eef2f5; --ink-2:#a7b2bb; --ink-3:#77838c;
+  --line:#242e37; --line-2:#33404a;
+  --accent:#7fb2dd; --accent-ink:#08131c; --accent-soft:#152736; --accent-line:#2b4459;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+  --good-soft:#11291a; --warn-soft:#2e2513; --crit-soft:#2e1616;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300;
+  --grid:#212a32; --axis:#33404a;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Source Sans 3",system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:Archivo,system-ui,sans-serif;margin:0;text-wrap:balance;letter-spacing:-.012em}
+button,input,select,textarea{font:inherit;color:inherit}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-columns:216px 1fr;min-height:100vh}
+.rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{padding:16px 16px 14px;border-bottom:1px solid var(--line)}
+.brand .mark{display:flex;align-items:center;gap:9px}
+.brand .glyph{width:26px;height:26px;flex:none;border-radius:5px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-family:Archivo;font-weight:700;font-size:12px;letter-spacing:.02em}
+.brand h1{font-size:14.5px;font-weight:700;line-height:1.15}
+.brand .sub{font-size:11px;color:var(--ink-3);margin-top:3px;letter-spacing:.02em}
+nav{padding:10px 8px;display:flex;flex-direction:column;gap:1px}
+.navlab{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);padding:12px 8px 5px}
+.navbtn{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:none;border:0;padding:7px 9px;border-radius:5px;cursor:pointer;color:var(--ink-2);font-weight:500}
+.navbtn:hover{background:var(--surface-2);color:var(--ink)}
+.navbtn.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+:root[data-theme="dark"] .navbtn.on,:root:not([data-theme="light"]) .navbtn.on{color:var(--ink)}
+.navbtn svg{flex:none;opacity:.85}
+.navbtn .cnt{margin-left:auto;font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.railfoot{margin-top:auto;padding:12px;border-top:1px solid var(--line);font-size:11px;color:var(--ink-3);display:flex;flex-direction:column;gap:7px}
+.main{min-width:0;display:flex;flex-direction:column}
+
+/* ---------- topbar ---------- */
+.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:11px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.top h2{font-size:16px;font-weight:600}
+.top .spacer{flex:1}
+.progsel{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:5px 9px}
+.progsel select{border:0;background:none;font-weight:600;font-size:13px;max-width:280px;cursor:pointer;outline:none}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:100px;font-size:11.5px;font-weight:600;border:1px solid var(--line);background:var(--surface);white-space:nowrap}
+.chip .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.chip.ok{background:var(--good-soft);border-color:color-mix(in srgb,var(--good) 30%,transparent);color:color-mix(in srgb,var(--good) 72%,var(--ink))}
+.chip.wa{background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 40%,transparent);color:color-mix(in srgb,var(--warn) 55%,var(--ink))}
+.chip.cr{background:var(--crit-soft);border-color:color-mix(in srgb,var(--crit) 35%,transparent);color:color-mix(in srgb,var(--crit) 75%,var(--ink))}
+.view{padding:22px;max-width:1500px;width:100%}
+
+/* ---------- generic ---------- */
+.btn{background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r);padding:6px 11px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink-2);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:var(--surface-2);color:var(--ink);border-color:var(--ink-3)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri:hover{filter:brightness(1.1)}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn:focus-visible,.navbtn:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.cell:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld label{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.fld input,.fld select,.fld textarea{background:var(--surface-2);border:1px solid var(--line);border-radius:5px;padding:6px 8px;font-size:13px;width:100%}
+.fld input:focus,.fld select:focus,.fld textarea:focus{background:var(--surface);border-color:var(--accent)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.panel>header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.panel>header h3{font-size:13.5px;font-weight:600}
+.panel>header .hint{font-size:11.5px;color:var(--ink-3)}
+.panel>header .spacer{flex:1}
+.pad{padding:16px}
+.grid{display:grid;gap:14px}
+.eyebrow{font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.scroll{overflow-x:auto}
+
+/* ---------- stat strip ---------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));border:1px solid var(--line);border-radius:8px;background:var(--surface);overflow:hidden}
+.stat{padding:14px 16px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:3px;min-width:0}
+.stat:last-child{border-right:0}
+.stat .k{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.stat .v{font-family:Archivo;font-size:29px;font-weight:600;line-height:1.05;letter-spacing:-.02em}
+.stat .v small{font-size:15px;font-weight:500;color:var(--ink-3);margin-left:1px}
+.stat .m{font-size:12px;color:var(--ink-2)}
+.meter{height:5px;border-radius:3px;background:var(--surface-3);overflow:hidden;margin-top:5px}
+.meter i{display:block;height:100%;border-radius:3px;background:var(--accent)}
+
+/* ---------- tables ---------- */
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+th{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0;z-index:2;white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:hover td{background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:0}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{color:var(--ink)}
+.rowbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent);font-weight:600;cursor:pointer;text-align:left}
+:root[data-theme="dark"] .rowbtn,:root:not([data-theme="light"]) .rowbtn{color:var(--ink)}
+.rowbtn:hover{text-decoration:underline}
+.bar{display:flex;align-items:center;gap:8px;min-width:118px}
+.bar .track{flex:1;height:6px;border-radius:3px;background:var(--surface-3);overflow:hidden}
+.bar .fill{height:100%;border-radius:3px}
+.bar b{font-size:12px;font-weight:600;width:34px;text-align:right;font-variant-numeric:tabular-nums}
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);white-space:nowrap}
+.tag .dot{width:6px;height:6px;border-radius:50%;flex:none}
+
+/* ---------- matrix ---------- */
+.matrix{font-size:12px}
+.matrix th{padding:6px 4px;text-align:center}
+.matrix th.rot{height:120px;vertical-align:bottom;padding-bottom:8px;width:32px;min-width:32px}
+.matrix th.rot span{display:block;writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font-size:10.5px;letter-spacing:.03em;text-transform:none;font-weight:600}
+.matrix td{padding:0;text-align:center;border-right:1px solid var(--line)}
+.matrix td.name,.matrix th.name{text-align:left;padding:6px 10px;position:sticky;left:0;background:var(--surface);z-index:1;border-right:1px solid var(--line-2);min-width:230px}
+.matrix tbody tr:hover td.name{background:var(--surface-2)}
+.cell{width:100%;height:30px;border:0;background:none;cursor:pointer;display:grid;place-items:center;padding:0}
+.cell i{width:15px;height:15px;border-radius:3px;display:block;border:1px solid transparent}
+.cell:hover i{transform:scale(1.22);transition:transform .08s}
+.st-completa i{background:var(--good);border-color:color-mix(in srgb,var(--good) 70%,#000)}
+.st-parcial i{background:var(--warn);border-color:color-mix(in srgb,var(--warn) 65%,#000)}
+.st-no i{background:var(--surface-3);border-color:var(--line-2)}
+.st-si i{background:var(--accent);border-color:var(--accent)}
+.st-na i{background:color-mix(in srgb,var(--crit) 16%,transparent);border-color:var(--crit);position:relative}
+.st-na i::before,.st-na i::after{content:"";position:absolute;left:2px;right:2px;top:6px;height:1.6px;background:var(--crit);border-radius:1px}
+.st-na i::before{transform:rotate(45deg)}
+.st-na i::after{transform:rotate(-45deg)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11.5px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:3px;display:block;border:1px solid transparent}
+
+/* ---------- charts ---------- */
+.chartwrap{padding:14px 16px 6px}
+svg text{font-family:"Source Sans 3",sans-serif}
+.axlab{font-size:11px;fill:var(--ink-3)}
+.vallab{font-size:11px;fill:var(--ink-2);font-weight:600;font-variant-numeric:tabular-nums}
+.gridline{stroke:var(--grid);stroke-width:1}
+.baseline{stroke:var(--axis);stroke-width:1}
+.stagerow{cursor:default}
+.stagerow:hover .rowbg{fill:var(--surface-2)}
+
+/* ---------- drawer ---------- */
+.scrim{position:fixed;inset:0;background:rgba(8,14,19,.42);z-index:40;opacity:0;pointer-events:none;transition:opacity .16s}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:min(720px,100%);background:var(--bg);z-index:41;box-shadow:var(--shadow);transform:translateX(100%);transition:transform .2s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+.drawer.on{transform:none}
+.drawer header{padding:14px 18px;border-bottom:1px solid var(--line);background:var(--surface);display:flex;gap:12px;align-items:flex-start}
+.drawer header h3{font-size:16px;font-weight:700}
+.drawer header .meta{font-size:12px;color:var(--ink-3);margin-top:2px}
+.drawer .body{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.drawer .body>*{flex:0 0 auto}
+.drawer input,.drawer textarea,.drawer .seg button,.cell{pointer-events:none}
+.drawer input,.drawer textarea{background:transparent;border-color:transparent;padding-left:0;color:var(--ink)}
+.cell{cursor:default}
+#view input,#view select,#view textarea,#view .seg button{pointer-events:none}
+#view .seg button:not(.on){opacity:.45}
+.x{background:none;border:0;cursor:pointer;color:var(--ink-3);font-size:20px;line-height:1;padding:2px 5px;border-radius:4px}
+.x:hover{background:var(--surface-2);color:var(--ink)}
+.stagelist{display:flex;flex-direction:column}
+.stagerowe{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);align-items:center}
+.stagerowe:last-child{border-bottom:0}
+.stagerowe .nm{font-weight:600;font-size:13px}
+.stagerowe .sub{font-size:11.5px;color:var(--ink-3);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:5px;overflow:hidden}
+.seg button{background:var(--surface);border:0;border-right:1px solid var(--line);padding:4px 9px;font-size:11.5px;font-weight:600;cursor:pointer;color:var(--ink-3)}
+.seg button:last-child{border-right:0}
+.seg button:hover{background:var(--surface-2)}
+.seg button.on{color:#fff}
+.seg button.on.completa{background:var(--good)}
+.seg button.on.parcial{background:var(--warn);color:#3a2a00}
+.seg button.on.no{background:var(--line-2);color:var(--ink)}
+.seg button.on.na{background:var(--crit);color:#fff}
+.doc.na{background:color-mix(in srgb,var(--crit) 9%,transparent);border-color:var(--crit)}
+.doc.na .t{color:var(--crit)}
+.nabox{display:block;width:13px;height:13px;border-radius:3px;background:color-mix(in srgb,var(--crit) 16%,transparent);border:1px solid var(--crit);position:relative}
+.nabox::before,.nabox::after{content:"";position:absolute;left:2px;right:2px;top:5px;height:1.6px;background:var(--crit);border-radius:1px}
+.nabox::before{transform:rotate(45deg)}
+.nabox::after{transform:rotate(-45deg)}
+.na-tag{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--crit);border:1px solid var(--crit);border-radius:3px;padding:0 4px;vertical-align:1px;text-decoration:none}
+.docgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.doc{display:flex;gap:9px;align-items:flex-start;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);cursor:pointer}
+.doc.on{background:var(--accent-soft);border-color:var(--accent-line)}
+.doc input{margin:2px 0 0;accent-color:var(--accent);flex:none}
+.doc .t{font-size:12.5px;font-weight:600}
+.doc .d{font-size:11px;color:var(--ink-3);line-height:1.35}
+
+.modal{position:fixed;z-index:45;top:50%;left:50%;transform:translate(-50%,-50%) scale(.97);width:min(620px,94vw);max-height:86vh;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .14s,transform .14s}
+.modal.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.modal header{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start}
+.modal header h3{font-size:16px;font-weight:700}
+.modal .mbody{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.modal footer{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;background:var(--surface-2);border-radius:0 0 10px 10px}
+.diff{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.diff div{background:var(--surface);padding:10px 12px}
+.diff .k{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.diff .v{font-family:Archivo;font-size:22px;font-weight:600;line-height:1.1}
+.log{max-height:170px;overflow-y:auto;border:1px solid var(--line);border-radius:6px;padding:9px 11px;background:var(--surface-2);font-size:12px;line-height:1.55;color:var(--ink-2)}
+.log b{color:var(--ink)}
+.drop{border:2px dashed var(--line-2);border-radius:8px;padding:22px;text-align:center;color:var(--ink-3);font-size:13px;cursor:pointer}
+.drop.hot{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.prog{height:6px;border-radius:3px;background:var(--surface-3);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
+/* ---------- misc ---------- */
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.toolbar input[type=search]{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:6px 10px;min-width:210px}
+.toolbar select{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:6px 8px;font-size:13px}
+.alert{display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);align-items:flex-start}
+.alert:last-child{border-bottom:0}
+.alert .ic{width:20px;height:20px;border-radius:5px;flex:none;display:grid;place-items:center;font-size:12px;font-weight:700;margin-top:1px}
+.alert.cr .ic{background:var(--crit-soft);color:var(--crit)}
+.alert.wa .ic{background:var(--warn-soft);color:color-mix(in srgb,var(--warn) 60%,var(--ink))}
+.alert.ok .ic{background:var(--good-soft);color:var(--good)}
+.alert .t{font-weight:600;font-size:13px}
+.alert .d{font-size:12px;color:var(--ink-2)}
+.empty{padding:34px 20px;text-align:center;color:var(--ink-3);font-size:13px}
+.banner{display:flex;gap:10px;align-items:center;padding:9px 13px;border:1px solid var(--warn);background:var(--warn-soft);border-radius:var(--r);font-size:12.5px;margin-bottom:14px;color:var(--ink)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:6px 14px;font-size:13px}
+.kv dt{color:var(--ink-3);font-size:12px}
+.kv dd{margin:0;font-weight:500}
+@media(max-width:1080px){.two,.three{grid-template-columns:1fr}}
+@media(max-width:820px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .rail,.main{min-width:0;max-width:100%}
+  .rail{position:sticky;top:0;z-index:30;height:auto;border-right:0;border-bottom:1px solid var(--line);
+        background:var(--surface);display:block;overflow:hidden}
+  .brand{padding:9px 12px;border-bottom:1px solid var(--line)}
+  .brand h1{font-size:13.5px}
+  .brand .sub,.navlab,.railfoot{display:none}
+  nav{flex-direction:row;gap:4px;padding:7px 10px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+      scrollbar-width:none;max-width:100%}
+  nav::-webkit-scrollbar{display:none}
+  .navbtn{width:auto;flex:0 0 auto;white-space:nowrap;padding:6px 11px;border-radius:99px;
+          border:1px solid var(--line);font-size:12.5px;gap:6px}
+  .navbtn svg{width:13px;height:13px}
+  .navbtn .cnt{margin-left:3px}
+  .top{position:static;padding:10px 12px;gap:8px;backdrop-filter:none;min-width:0}
+  .panel,.stats{max-width:100%}
+  .top h2{font-size:14.5px;width:100%}
+  .progsel{flex:1 1 100%}
+  .progsel select{width:100%}
+  .view{padding:12px;min-width:0;max-width:100%;overflow-x:hidden}
+  .stats{grid-template-columns:1fr 1fr}
+  .stat .v{font-size:22px}
+  .grid{grid-template-columns:1fr!important;gap:12px!important}
+  .panel header{flex-wrap:wrap;gap:5px}
+  .panel header .hint{width:100%}
+  #frescoChip,#plazoChip{font-size:11px}
+}
+/* tarjetas en vez de tabla ancha, en pantallas chicas */
+@media(max-width:700px){
+  table.cards thead{display:none}
+  table.cards,table.cards tbody,table.cards tr,table.cards td{display:block;width:auto}
+  table.cards tr{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin:0 0 9px;
+                 background:var(--surface)}
+  table.cards td{border:0;padding:4px 0;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  table.cards td::before{content:attr(data-l);flex:none;font-size:10px;font-weight:600;letter-spacing:.06em;
+                         text-transform:uppercase;color:var(--ink-3)}
+  table.cards td[data-l=""]::before{display:none}
+  table.cards td.tit-n,table.cards td.solo-ancho{display:none}
+  table.cards td.tit{display:block;padding-bottom:6px;margin-bottom:4px;border-bottom:1px solid var(--line)}
+  table.cards td.tit::before{display:none}
+  table.cards .bar{justify-content:flex-end}
+  .scroll{overflow-x:auto}
+}
+@media print{.rail,.top,.toolbar,.noprint{display:none!important}.view{padding:0;max-width:none}.panel{break-inside:avoid;box-shadow:none}body{background:#fff}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand">
+      <div class="mark">
+        <div class="glyph">EG</div>
+        <div><h1 id="brandName">Avance EGIS</h1><div class="sub" id="brandSub">Lectura directa de OneDrive</div></div>
+      </div>
+    </div>
+    <nav id="nav">
+      <div class="navlab">Seguimiento</div>
+      <button class="navbtn on" data-v="panel"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.8" y="1.8" width="5" height="5" rx="1"/><rect x="9.2" y="1.8" width="5" height="5" rx="1"/><rect x="1.8" y="9.2" width="5" height="5" rx="1"/><rect x="9.2" y="9.2" width="5" height="5" rx="1"/></svg>Panel</button>
+      <button class="navbtn" data-v="proyectos"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 3.6h12M2 8h12M2 12.4h12"/></svg>Proyectos<span class="cnt" id="cntProy"></span></button>
+      <button class="navbtn" data-v="etapas"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.4 8l3 3 8-8"/><path d="M2.4 13.2h4"/></svg>Matriz de etapas</button>
+      <button class="navbtn" data-v="docs"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 1.8h5l3.2 3.2v9.2H4z"/><path d="M9 1.8V5h3.2"/></svg>Carpeta documental</button>
+      <button class="navbtn" data-v="avtec"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 13.4V9.1M6 13.4V5.6M10 13.4V7.3M14 13.4V2.9"/></svg>Avance Técnico</button>
+      <button class="navbtn" data-v="cartera"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 1.9l6.1 11.3H1.9z"/><path d="M8 6.4v3.1M8 11.3v.1"/></svg>Cartera crítica</button>
+      <button class="navbtn" data-v="evaluacion"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3.4 1.9h9.2v12.2H3.4z"/><path d="M5.8 5.4h4.4M5.8 8h4.4M5.8 10.6h2.6"/></svg>Evaluación previa</button>
+      <div class="navlab">Salida</div>
+      <button class="navbtn" data-v="reportes"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.5 13.5V7M6.8 13.5V3M11.1 13.5V9.4"/><path d="M1.5 13.5h13"/></svg>Reportes</button>
+      <button class="navbtn" data-v="fuentes"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="8" cy="3.6" rx="5.4" ry="2"/><path d="M2.6 3.6v8.8c0 1.1 2.4 2 5.4 2s5.4-.9 5.4-2V3.6"/><path d="M2.6 8c0 1.1 2.4 2 5.4 2s5.4-.9 5.4-2"/></svg>Fuentes de datos</button>
+    </nav>
+    <div class="railfoot">
+      <div id="syncState"></div>
+      <button class="btn sm" id="themeBtn" style="align-self:flex-start">Cambiar tema</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="top">
+      <h2 id="viewTitle">Panel de control</h2>
+      <div class="progsel"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="var(--ink-3)" stroke-width="1.6"><path d="M1.8 4.5h12.4v8.7H1.8z"/><path d="M1.8 4.5L3.4 2.4h9.2l1.6 2.1"/></svg><select id="progSel"></select></div>
+      <div class="spacer"></div>
+      <span class="chip" id="plazoChip"></span>
+      <span class="chip" id="frescoChip" title=""></span>
+      <button class="btn noprint" id="reloadBtn" style="display:none" title="Vuelve a leer la base de datos del sistema (lo que dejó la última sincronización). Para releer OneDrive hay que esperar la sincronización automática o pedirla.">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M13.6 6.6A5.8 5.8 0 1 0 14 9.4"/><path d="M13.9 2.6v4h-4"/></svg>Actualizar</button>
+      <button class="btn noprint" id="printBtn">Imprimir</button>
+    </div>
+    <div class="view" id="view"><div class="empty">Cargando…</div></div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true"></aside>
+<input type="file" id="fileIn" accept=".xlsx,.xlsm,.xls" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+<div class="scrim" id="scrim2"></div>
+<div id="modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   Control EGIS · monitoreo de proyectos DS10 / Habitabilidad Rural
+   Estado compartido en la base de datos del artifact (capacidad db).
+   ============================================================ */
+
+const EST = {completa:{lab:"Completa",w:1,cls:"completa"},parcial:{lab:"Parcial",w:.5,cls:"parcial"},no:{lab:"No realizada",w:0,cls:"no"},na:{lab:"No corresponde",w:0,cls:"na"}};
+const SERIES = ["--s1","--s2","--s3","--s4","--s5","--s6"];
+const $ = (s,r)=> (r||document).querySelector(s);
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pct = n => Math.round(n*100);
+const fmtDate = d => { if(!d) return "—"; const p=String(d).split("-"); return p.length===3? p[2]+"-"+p[1]+"-"+p[0] : d; };
+const todayISO = () => new Date().toISOString().slice(0,10);
+
+const S = {db:null, dl:null, ultima:null, recargando:false, progs:[], proys:[], progId:null, view:"panel", ready:false,
+  filtro:{q:"",comuna:"",estado:"",resp:"",edec:"",grupo:""}, sort:{k:"numero",dir:1}, openId:null, autor:""};
+
+/* ---------- cálculo ---------- */
+function prog(){ return S.progs.find(p=>p.id===S.progId) || S.progs[0] || null; }
+function proyectos(){ return S.proys.filter(p=>p.programaId===S.progId).sort((a,b)=>(a.numero||0)-(b.numero||0)); }
+function esNA(v){ return !!v && (v.estado==="na" || v.na===true); }
+function avEtapas(p,pg){
+  const et = pg && pg.etapas || []; if(!et.length) return 0;
+  let s=0,n=0;
+  for(const e of et){ const v=(p.etapas||{})[e.id]; if(esNA(v)) continue; n++; s += (EST[(v&&v.estado)||"no"]||EST.no).w; }
+  return n? s/n : 1;
+}
+function avDocs(p,pg){
+  const bl = pg && pg.bloques || []; if(!bl.length) return 0;
+  let s=0,n=0;
+  for(const b of bl){ const v=(p.bloques||{})[b.id]||{}; if(esNA(v)) continue; n++; if(v.cargado) s++; }
+  return n? s/n : 1;
+}
+function contarNA(p,pg){
+  const et=(pg&&pg.etapas)||[], bl=(pg&&pg.bloques)||[];
+  return et.filter(e=>esNA((p.etapas||{})[e.id])).length + bl.filter(b=>esNA((p.bloques||{})[b.id])).length;
+}
+function diasPlazo(pg){
+  if(!pg||!pg.plazo) return null;
+  const t=new Date(pg.plazo+"T12:00:00"), h=new Date(todayISO()+"T12:00:00");
+  return Math.round((t-h)/86400000);
+}
+function nivel(a){ return a>=1?"ok" : a>=.5?"wa" : a>0?"wa" : "cr"; }
+function colorAvance(a){ return a>=1?"var(--good)" : a>=.6?"var(--s3)" : a>=.3?"var(--warn)" : a>0?"var(--serious)":"var(--line-2)"; }
+
+/* ---------- persistencia ---------- */
+async function guardarProy(p, campos){ return;
+async function _n1(){
+  Object.assign(p, campos, {updatedAt:new Date().toISOString(), updatedBy:S.autor||"—"});
+  render();
+  if(!S.db) return;
+  try{ await S.db.doc("proyectos/"+p.id).set(JSON.parse(JSON.stringify(p))); }
+  catch(e){ aviso("No se pudo guardar el proyecto: "+(e.message||e.code)); }
+}
+}
+async function guardarProg(pg, campos){ return;
+async function _n2(){
+  Object.assign(pg, campos, {updatedAt:new Date().toISOString()});
+  render();
+  if(!S.db) return;
+  try{ await S.db.doc("programas/"+pg.id).set(JSON.parse(JSON.stringify(pg))); }
+  catch(e){ aviso("No se pudo guardar el programa: "+(e.message||e.code)); }
+}
+}
+let avisoT;
+function aviso(msg){
+  const el=$("#syncState"); if(!el) return;
+  el.textContent=msg; el.style.color="var(--crit)";
+  clearTimeout(avisoT); avisoT=setTimeout(estadoSync,6000);
+}
+function estadoSync(){ return;
+  const el=$("#syncState"); if(!el) return;
+  el.style.color="";
+  const hora = S.ultima? S.ultima.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"}) : "—";
+  el.innerHTML = S.db
+    ? '<span style="display:inline-flex;align-items:center;gap:6px"><i style="width:7px;height:7px;border-radius:50%;background:var(--good);display:block"></i>En línea · datos de las '+hora+'</span>'
+    : '<span style="display:inline-flex;align-items:center;gap:6px"><i style="width:7px;height:7px;border-radius:50%;background:var(--crit);display:block"></i>Sin conexión a la base de datos</span>';
+}
+/* Relectura manual: por si la actualización automática se cae o queda pegada. */
+async function recargar(manual){
+  const btn=$("#reloadBtn");
+  if(!S.db){ aviso("No hay conexión con la base de datos. Recarga la página (F5) para reintentar."); return; }
+  if(S.recargando) return;
+  S.recargando=true;
+  if(btn){ btn.disabled=true; btn.style.opacity=".6"; }
+  try{
+    const [sp,sy]=await Promise.all([
+      S.db.collection("programas").get(),
+      S.db.collection("proyectos").limit(1000).get()
+    ]);
+    S.progs = sp.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    S.proys = sy.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    ordenarProgs();
+    if(!S.progId || !S.progs.some(x=>x.id===S.progId)) S.progId=(S.progs[0]||{}).id||null;
+    S.ultima=new Date(); S.ready=true;
+    render(); if(S.openId) pintarDrawer();
+    if(manual){ const el=$("#syncState"); el.style.color="";
+      el.innerHTML='<span style="color:var(--good);font-weight:600">Datos actualizados · '+S.proys.length+' proyectos</span>';
+      setTimeout(estadoSync,3000); }
+  }catch(e){
+    aviso("No se pudieron releer los datos: "+(e.message||e.code||e));
+  }finally{
+    S.recargando=false;
+    if(btn){ btn.disabled=false; btn.style.opacity=""; }
+  }
+}
+</script>
+<script>
+/* ============================ VISTAS ============================ */
+const TITULOS = {panel:"Panel de control",proyectos:"Proyectos y beneficiarios",etapas:"Matriz de etapas",docs:"Carpeta documental",avtec:"Avance Técnico · obra y módulo de postulación",cartera:"Cartera crítica · detalle de expedientes",evaluacion:"Evaluación previa del encargo",fuentes:"Fuentes de datos",reportes:"Reportes",config:"Configuración"};
+
+function render(){
+  const pg = prog();
+  navGate(pg);
+  $("#viewTitle").textContent = TITULOS[S.view];
+  $("#cntProy").textContent = pg ? proyectos().length : "";
+  renderPlazo(pg);
+  renderFresco(pg);
+  renderProgSel();
+  const v = $("#view");
+  if(!S.ready){ v.innerHTML = '<div class="empty">Cargando datos…</div>'; return; }
+  if(!pg){ v.innerHTML = vistaVacia(); return; }
+  v.innerHTML = ({panel:vPanel,proyectos:vProyectos,etapas:vEtapas,docs:vDocs,avtec:vAvanceTecnico,cartera:vCartera,evaluacion:vEval,fuentes:vFuentes,reportes:vReportes,config:vConfig})[S.view](pg);
+  if(!S.dl) v.querySelectorAll("[data-dl]").forEach(b=>b.remove());
+  if(S.view==="panel") dibujarGraficos(pg);
+  if(S.view==="reportes") dibujarGraficosReporte(pg);
+}
+function navGate(pg){
+  const ps = pg? proyectos() : [];
+  const tieneCC   = ps.some(p=>p.cc && Object.keys(p.cc).length);
+  const tieneAT   = ps.some(p=>p.at && p.at.obra);
+  const vis = {cartera:tieneCC, avtec:tieneAT};
+  document.querySelectorAll(".navbtn").forEach(b=>{
+    const k=b.dataset.v;
+    if(k in vis) b.style.display = vis[k]? "" : "none";
+  });
+  if(S.view in vis && !vis[S.view]) S.view="panel";
+  syncNav();
+}
+function vistaVacia(){
+  return '<div class="panel"><div class="empty"><p style="font-size:15px;color:var(--ink);font-weight:600;margin:0 0 6px">Aún no hay ningún encargo cargado</p><p style="margin:0 0 14px">Crea el primer programa para empezar a registrar proyectos.</p><button class="btn pri" onclick="nuevoPrograma()">Crear programa</button></div></div>';
+}
+function renderProgSel(){
+  const s=$("#progSel");
+  s.innerHTML = S.progs.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===S.progId?" selected":"")+'>'+esc(p.nombre)+'</option>').join("")
+    || '<option>Sin programas</option>';
+}
+function corteDe(pg){
+  const ps=(S.proys||[]).filter(p=>p.programaId===(pg&&pg.id));
+  let max="";
+  ps.forEach(p=>{
+    const c=(p.at&&p.at.actualizado)||p.updatedAt||"";
+    if(c>max) max=c;
+  });
+  return max;
+}
+function renderFresco(pg){
+  const c=$("#frescoChip"); if(!c) return;
+  const iso=corteDe(pg);
+  if(!iso){ c.style.display="none"; return; }
+  c.style.display="";
+  const d=new Date(iso.length<=10? iso+"T12:00:00" : iso);
+  const horas=(Date.now()-d.getTime())/3600000;
+  const cls = horas<30? "ok" : horas<80? "wa" : "cr";
+  const txt = horas<1.5? "hace unos minutos"
+            : horas<24? "hace "+Math.round(horas)+" h"
+            : horas<48? "ayer"
+            : "hace "+Math.round(horas/24)+" días";
+  c.className="chip "+cls;
+  c.textContent="Datos leídos "+txt;
+  c.title="Última lectura de las carpetas y planillas de OneDrive: "+d.toLocaleString("es-CL")+
+          ". La página muestra siempre lo último que dejó la sincronización; no entra a OneDrive por sí sola.";
+}
+function renderPlazo(pg){
+  const c=$("#plazoChip"), d=diasPlazo(pg);
+  if(d===null){ c.className="chip"; c.textContent="Plazo comprometido sin definir"; return; }
+  const cls = d<0?"cr" : d<=30?"cr" : d<=60?"wa":"ok";
+  c.className="chip "+cls;
+  c.textContent = d<0 ? "Plazo vencido hace "+Math.abs(d)+" días"
+    : d===0 ? "El plazo vence hoy"
+    : d+" días para el plazo comprometido";
+}
+
+/* ---------------- PANEL ---------------- */
+function etapaActual(p,pg){
+  const es=pg.etapas||[]; const tot=es.length;
+  let listas=0, prox=null;
+  for(let i=0;i<tot;i++){
+    const st=(p.etapas||{})[es[i].id]||{};
+    if(st.estado==="na" || /no aplica|no corresponde/i.test(st.nota||st.respaldo||"")){ listas++; continue; }
+    if(st.estado==="completa"){ listas++; continue; }
+    if(!prox) prox={i:i+1,nombre:es[i].nombre,estado:st.estado||"no"};
+  }
+  return {i:prox?prox.i:tot, tot, listas, nombre: prox? prox.nombre : "Proceso terminado", estado: prox? prox.estado : "completa"};
+}
+const TRAMOS=[
+  {k:"fin", lab:"Terminado",        col:"var(--good)",    test:a=>a>=1},
+  {k:"alt", lab:"Avanzado",         col:"var(--s1)",      test:a=>a>=.7&&a<1},
+  {k:"med", lab:"A medio camino",   col:"var(--warn)",    test:a=>a>=.34&&a<.7},
+  {k:"ini", lab:"Recién iniciado",  col:"var(--serious)", test:a=>a>0&&a<.34},
+  {k:"cero",lab:"Sin avance",       col:"var(--crit)",    test:a=>a<=0}
+];
+function tramoDe(a){ return TRAMOS.find(t=>t.test(a)) || TRAMOS[4]; }
+
+function vPanel(pg){
+  const ps=proyectos(), n=ps.length;
+  if(!n) return '<div class="panel"><div class="empty">Esta cartera todavía no tiene beneficiarios cargados.</div></div>';
+  const avg = ps.reduce((s,p)=>s+avEtapas(p,pg),0)/n;
+  const avgD = ps.reduce((s,p)=>s+avDocs(p,pg),0)/n;
+  const d = diasPlazo(pg);
+
+  const conAv = ps.map(p=>({p, a:avEtapas(p,pg), dd:avDocs(p,pg)}));
+  const cuenta={}; TRAMOS.forEach(t=>cuenta[t.k]=0);
+  conAv.forEach(x=>cuenta[tramoDe(x.a).k]++);
+  const comp=cuenta.fin, cero=cuenta.cero, marcha=n-comp-cero;
+  const criticos = conAv.filter(x=>x.a<.34).sort((a,b)=>a.a-b.a);
+  const comunas = agrupaComunas(ps,pg);
+  const grupos = new Set(ps.map(p=>p.grupo).filter(Boolean));
+
+  /* --------- alertas, siempre habladas en personas --------- */
+  const etapasCriticas = (pg.etapas||[]).map(e=>{
+    const c={completa:0,parcial:0,no:0};
+    ps.forEach(p=>{ c[((p.etapas||{})[e.id]||{}).estado||"no"]++; });
+    return {e,c,av:(c.completa+c.parcial*.5)/n};
+  }).sort((a,b)=>a.av-b.av);
+  const bloquesFaltantes = (pg.bloques||[]).map(b=>({b, f: ps.filter(p=>!((p.bloques||{})[b.id]||{}).cargado).length}))
+    .filter(x=>x.f>0).sort((a,b)=>b.f-a.f);
+
+  let alertas=[];
+  if(d!==null && d<0) alertas.push(["cr","!","El plazo se venció hace "+Math.abs(d)+" días","Quedan "+(n-comp)+" de "+n+" personas sin terminar su proceso."]);
+  else if(d!==null && d<=45) alertas.push([d<=20?"cr":"wa",d,"Quedan "+d+" días de plazo","Hay "+(n-comp)+" personas todavía en proceso."]);
+  if(cero) alertas.push(["cr",cero,cero+(cero>1?" personas no han empezado":" persona no ha empezado"),"No registran ninguna etapa iniciada de las "+(pg.etapas||[]).length+" del proceso."]);
+  if(criticos.length && criticos.length!==cero) alertas.push(["wa",criticos.length,criticos.length+" personas van bajo el 34%","Son las que arrastran el promedio de la cartera ("+pct(avg)+"%)."]);
+  etapasCriticas.slice(0,2).forEach(x=>{ if(x.av<.25) alertas.push(["wa",x.c.no,
+    x.c.no===n? "Nadie ha empezado «"+x.e.nombre+"»" : x.c.no+" personas detenidas en «"+x.e.nombre+"»",
+    x.c.no===n? "Ninguna de las "+n+" personas registra avance en esa etapa." : "Es la etapa donde más gente está detenida."]); });
+  bloquesFaltantes.slice(0,2).forEach(x=>{ if(x.f> n*0.5) alertas.push(["wa",x.f,
+    x.f===n? "Ninguna carpeta tiene «"+x.b.nombre+"»" : x.f+" personas sin «"+x.b.nombre+"»",
+    x.f===n? "Falta ese documento en las "+n+" carpetas de la cartera." : "Falta ese documento en su carpeta."]); });
+  const sinResp = ps.filter(p=>!p.responsable).length;
+  if(sinResp) alertas.push(["wa",sinResp,sinResp+(sinResp>1?" personas sin responsable":" persona sin responsable"),"Nadie figura a cargo de su seguimiento."]);
+  if(!alertas.length) alertas.push(["ok","✓","Sin alertas activas","Todas las personas avanzan dentro de los umbrales definidos."]);
+
+  const filas = conAv.slice().sort((a,b)=>a.a-b.a || String(a.p.postulante||"").localeCompare(String(b.p.postulante||"")));
+  const hayGrupo = grupos.size>1;
+  const hayEstado = ps.some(p=>p.estado);
+  const hayResp = ps.some(p=>p.responsable);
+
+  return `
+  <div class="stats" style="margin-bottom:14px">
+    <div class="stat"><div class="k">Personas en la cartera</div><div class="v">${n}</div>
+      <div class="m">${Object.keys(comunas).length} comuna${Object.keys(comunas).length>1?"s":""}${hayGrupo?" · "+grupos.size+" grupos":""}</div></div>
+    <div class="stat"><div class="k">Terminaron su proceso</div><div class="v" style="color:var(--good)">${comp}</div>
+      <div class="meter"><i style="width:${Math.round(comp/n*100)}%;background:var(--good)"></i></div>
+      <div class="m">${Math.round(comp/n*100)}% de la cartera</div></div>
+    <div class="stat"><div class="k">En marcha</div><div class="v">${marcha}</div>
+      <div class="meter"><i style="width:${Math.round(marcha/n*100)}%;background:var(--warn)"></i></div>
+      <div class="m">Con al menos una etapa avanzada</div></div>
+    <div class="stat"><div class="k">Sin empezar</div><div class="v" style="color:${cero?"var(--crit)":"var(--ink)"}">${cero}</div>
+      <div class="meter"><i style="width:${Math.round(cero/n*100)}%;background:var(--crit)"></i></div>
+      <div class="m">Ninguna etapa registrada</div></div>
+    <div class="stat"><div class="k">Plazo comprometido</div><div class="v">${d===null?"—":(d<0?"−"+Math.abs(d):d)}<small>${d===null?"":" días"}</small></div>
+      <div class="m">${pg.plazo? fmtDate(pg.plazo) : "Sin definir"}</div></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <header><h3>Cómo va cada persona</h3><span class="hint">${n} beneficiarios · de menor a mayor avance</span><span class="spacer"></span>
+      <button class="btn sm" onclick="ir('proyectos')">Ficha completa</button></header>
+    <div class="pad" style="padding-bottom:10px">
+      <div style="display:flex;height:26px;border-radius:5px;overflow:hidden;border:1px solid var(--line)">
+        ${TRAMOS.filter(t=>cuenta[t.k]).map(t=>`<div title="${t.lab}: ${cuenta[t.k]}" style="width:${cuenta[t.k]/n*100}%;background:${t.col};display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">${cuenta[t.k]/n>=.06?cuenta[t.k]:""}</div>`).join("")}
+      </div>
+      <div class="legend" style="margin-top:9px">
+        ${TRAMOS.map(t=>`<span><i style="background:${t.col}"></i>${t.lab} · <b style="color:var(--ink)">${cuenta[t.k]}</b></span>`).join("")}
+      </div>
+    </div>
+    <div class="scroll" style="max-height:620px"><table class="cards">
+      <thead><tr><th style="width:38px">N°</th><th>Beneficiario</th><th>Comuna</th>${hayGrupo?"<th>Grupo</th>":""}<th class="num">Etapas listas</th><th>Próximo paso</th><th style="width:150px">Avance del proceso</th><th class="num">Docs</th>${hayEstado?"<th>Estado declarado</th>":""}${hayResp?"<th>Responsable</th>":""}</tr></thead>
+      <tbody>${filas.map(x=>{
+        const t=tramoDe(x.a), ea=etapaActual(x.p,pg);
+        return `<tr>
+          <td class="mono tit-n" data-l="" style="color:var(--ink-3)">${esc(x.p.numero||"—")}</td>
+          <td class="tit" data-l=""><button class="rowbtn" onclick="abrir('${esc(x.p.id)}')">${esc(x.p.postulante)}</button>
+            <div style="font-size:11px;color:var(--ink-3)">${esc([x.p.comuna,x.p.localidad||x.p.rut].filter(Boolean).join(" · "))}</div></td>
+          <td data-l="Comuna" class="solo-ancho">${esc(x.p.comuna||"—")}</td>
+          ${hayGrupo?`<td data-l="Grupo" style="color:var(--ink-2)">${esc(x.p.grupo||"—")}</td>`:""}
+          <td class="num mono" data-l="Etapas listas" style="color:var(--ink-2)"><span>${ea.listas}<span style="color:var(--ink-3)">/${ea.tot}</span></span></td>
+          <td data-l="Próximo paso"><span class="tag"><i class="dot" style="background:${t.col}"></i>${x.a>=1?"Proceso terminado":esc(ea.nombre)}</span></td>
+          <td data-l="Avance">${barra(x.a)}</td>
+          <td class="num" data-l="Docs" style="color:var(--ink-2)">${pct(x.dd)}%</td>
+          ${hayEstado?`<td data-l="Estado">${chipEstado(x.p.estado)}</td>`:""}
+          ${hayResp?`<td data-l="Responsable" style="color:var(--ink-2)">${esc(x.p.responsable||"—")}</td>`:""}
+        </tr>`;}).join("")}</tbody>
+    </table></div>
+  </div>
+
+  <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start">
+    <div style="display:flex;flex-direction:column;gap:14px">
+    <div class="panel">
+      <header><h3>Alertas</h3><span class="hint">${alertas.length} activa${alertas.length>1?"s":""}</span></header>
+      <div>${alertas.slice(0,7).map(a=>`<div class="alert ${a[0]}"><div class="ic">${esc(String(a[1]))}</div><div><div class="t">${esc(a[2])}</div><div class="d">${esc(a[3])}</div></div></div>`).join("")}</div>
+    </div>
+    <div class="panel">
+      <header><h3>Dónde se está atascando la gente</h3><span class="hint">personas detenidas en cada etapa</span></header>
+      <div class="chartwrap"><div id="chEtapas"></div></div>
+      <div class="pad" style="padding-top:0"><div class="legend">
+        <span><i style="background:var(--good)"></i>Ya la pasaron</span>
+        <span><i style="background:var(--warn)"></i>En curso</span>
+        <span><i style="background:var(--surface-3);border-color:var(--line-2)"></i>Todavía no llegan</span>
+      </div></div>
+    </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="panel">
+        <header><h3>Personas por comuna</h3><span class="hint">avance promedio de cada grupo</span></header>
+        <div class="chartwrap"><div id="chComunas"></div></div>
+      </div>
+      ${(()=>{const ge=agrupaEstados(ps); if(ge.length<2) return "";
+        return `<div class="panel"><header><h3>Estado declarado</h3><span class="hint">cuántas personas en cada estado</span></header>
+        <div class="scroll"><table><tbody>${ge.map(x=>`<tr>
+          <td>${chipEstado(x.lab==="Sin estado declarado"?"":x.lab)}${x.lab==="Sin estado declarado"?'<span style="color:var(--ink-3);font-size:12px">Sin estado declarado</span>':""}</td>
+          <td style="width:110px"><div class="bar"><div class="track"><div class="fill" style="width:${Math.round(x.n/n*100)}%;background:${tonoEstado(x.lab)}"></div></div><b>${x.n}</b></div></td>
+          </tr>`).join("")}</tbody></table></div></div>`;})()}
+    </div>
+  </div>`;
+}
+
+function filaMini(p,pg){
+  const a=avEtapas(p,pg), dd=avDocs(p,pg);
+  return `<tr><td class="mono" style="color:var(--ink-3)">${p.numero||"—"}</td>
+    <td><button class="rowbtn" onclick="abrir('${esc(p.id)}')">${esc(p.postulante)}</button></td>
+    <td>${esc(p.comuna)}</td>
+    <td>${barra(a)}</td><td class="num" style="color:var(--ink-2)">${pct(dd)}%</td>
+    <td style="color:var(--ink-2)">${esc(p.responsable||"—")}</td></tr>`;
+}
+function barra(a){
+  return `<div class="bar"><div class="track"><div class="fill" style="width:${pct(a)}%;background:${colorAvance(a)}"></div></div><b>${pct(a)}%</b></div>`;
+}
+const EST_TONO=[[/renuncia|no pago/i,"var(--crit)"],[/cerrado al 100|100% listo/i,"var(--good)"],[/^cerrado$/i,"var(--good)"],
+  [/cerrado, falta|certificado .*pendiente|por cerrar|50% listo/i,"var(--s3)"],[/falta cierre 50|falta certificado 50/i,"var(--warn)"],
+  [/falta cierre 100/i,"var(--serious)"]];
+function tonoEstado(e){ for(const [re,c] of EST_TONO) if(re.test(e||"")) return c; return "var(--ink-3)"; }
+function chipEstado(e){ return e? `<span class="tag"><i class="dot" style="background:${tonoEstado(e)}"></i>${esc(e)}</span>` : '<span style="color:var(--ink-3);font-size:12px">—</span>'; }
+function agrupaEstados(ps){
+  const g={}; ps.forEach(p=>{ const k=p.estado||"Sin estado declarado"; g[k]=(g[k]||0)+1; });
+  return Object.keys(g).map(k=>({lab:k,n:g[k]})).sort((a,b)=>b.n-a.n);
+}
+function agrupaComunas(ps,pg){
+  const g={};
+  ps.forEach(p=>{ const c=p.comuna||"Sin comuna"; (g[c]=g[c]||[]).push(p); });
+  return g;
+}
+</script>
+<script>
+/* ---------------- GRÁFICOS (SVG a mano, sin librerías) ---------------- */
+function dibujarGraficos(pg){
+  const ps=proyectos(), n=ps.length;
+  const filas=(pg.etapas||[]).map(e=>{
+    const c={completa:0,parcial:0,no:0};
+    ps.forEach(p=>{ c[((p.etapas||{})[e.id]||{}).estado||"no"]++; });
+    return {nombre:e.nombre,c,av:n?(c.completa+c.parcial*.5)/n:0};
+  }).sort((a,b)=>a.av-b.av);
+  const el=$("#chEtapas"); if(el) el.innerHTML = barrasApiladas(filas,n);
+  const g=agrupaComunas(ps,pg);
+  const datos=Object.keys(g).sort().map((k,i)=>({
+    lab:k, n:g[k].length,
+    av:g[k].reduce((s,p)=>s+avEtapas(p,pg),0)/g[k].length,
+    doc:g[k].reduce((s,p)=>s+avDocs(p,pg),0)/g[k].length,
+    color:"var("+SERIES[i%SERIES.length]+")"
+  })).sort((a,b)=>b.av-a.av);
+  const e2=$("#chComunas"); if(e2) e2.innerHTML = barrasComuna(datos);
+}
+function barrasApiladas(filas,n){
+  if(!filas.length||!n) return '<div class="empty">Sin datos para graficar.</div>';
+  const W=770,LW=252,rh=22,gap=5,H=filas.length*(rh+gap)+30, PW=W-LW-56;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:860px;display:block;height:auto" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Avance por etapa">`;
+  [0,.25,.5,.75,1].forEach(t=>{
+    const x=LW+t*PW;
+    s+=`<line class="gridline" x1="${x}" y1="14" x2="${x}" y2="${H-18}"/>`;
+    s+=`<text class="axlab" x="${x}" y="${H-5}" text-anchor="middle">${t*100}%</text>`;
+  });
+  filas.forEach((f,i)=>{
+    const y=20+i*(rh+gap);
+    const wc=f.c.completa/n*PW, wp=f.c.parcial/n*PW, wn=f.c.no/n*PW;
+    s+=`<g class="stagerow"><rect class="rowbg" x="0" y="${y-3}" width="${W}" height="${rh+6}" fill="transparent"/>`;
+    s+=`<text class="axlab" x="${LW-10}" y="${y+rh/2+4}" text-anchor="end" fill="var(--ink-2)">${esc(trunc(f.nombre,40))}</text>`;
+    let x=LW;
+    if(wc>0){ s+=`<rect x="${x}" y="${y}" width="${Math.max(wc-2,1)}" height="${rh}" rx="3" fill="var(--good)"><title>${esc(f.nombre)} — Completa: ${f.c.completa} de ${n}</title></rect>`; x+=wc; }
+    if(wp>0){ s+=`<rect x="${x}" y="${y}" width="${Math.max(wp-2,1)}" height="${rh}" rx="3" fill="var(--warn)"><title>${esc(f.nombre)} — Parcial: ${f.c.parcial} de ${n}</title></rect>`; x+=wp; }
+    if(wn>0){ s+=`<rect x="${x}" y="${y}" width="${Math.max(wn-2,1)}" height="${rh}" rx="3" fill="var(--surface-3)" stroke="var(--line-2)" stroke-width="1"><title>${esc(f.nombre)} — No realizada: ${f.c.no} de ${n}</title></rect>`; }
+    s+=`<text class="vallab" x="${LW+PW+8}" y="${y+rh/2+4}">${pct(f.av)}%</text></g>`;
+  });
+  s+=`<line class="baseline" x1="${LW}" y1="14" x2="${LW}" y2="${H-18}"/></svg>`;
+  return s;
+}
+function barrasComuna(d){
+  if(!d.length) return '<div class="empty">Sin datos.</div>';
+  const W=430,LW=112,rh=26,gap=13,H=d.length*(rh+gap)+30,PW=W-LW-56;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:560px;display:block;height:auto" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Avance por comuna">`;
+  [0,.5,1].forEach(t=>{const x=LW+t*PW;
+    s+=`<line class="gridline" x1="${x}" y1="12" x2="${x}" y2="${H-18}"/><text class="axlab" x="${x}" y="${H-5}" text-anchor="middle">${t*100}%</text>`;});
+  d.forEach((f,i)=>{
+    const y=18+i*(rh+gap);
+    s+=`<text class="axlab" x="${LW-10}" y="${y+11}" text-anchor="end" fill="var(--ink)" style="font-weight:600">${esc(f.lab)}</text>`;
+    s+=`<text class="axlab" x="${LW-10}" y="${y+23}" text-anchor="end">${f.n} proy.</text>`;
+    s+=`<rect x="${LW}" y="${y}" width="${PW}" height="12" rx="3" fill="var(--surface-3)"/>`;
+    s+=`<rect x="${LW}" y="${y}" width="${Math.max(f.av*PW,2)}" height="12" rx="3" fill="${f.color}"><title>${esc(f.lab)} — etapas ${pct(f.av)}%</title></rect>`;
+    s+=`<rect x="${LW}" y="${y+15}" width="${PW}" height="6" rx="3" fill="var(--surface-3)"/>`;
+    s+=`<rect x="${LW}" y="${y+15}" width="${Math.max(f.doc*PW,2)}" height="6" rx="3" fill="${f.color}" opacity=".45"><title>${esc(f.lab)} — documentos ${pct(f.doc)}%</title></rect>`;
+    s+=`<text class="vallab" x="${LW+PW+8}" y="${y+11}">${pct(f.av)}%</text>`;
+  });
+  s+=`<line class="baseline" x1="${LW}" y1="12" x2="${LW}" y2="${H-18}"/></svg>`
+   + '<div class="legend" style="padding:2px 0 10px"><span><i style="background:var(--ink-3)"></i>Barra gruesa: etapas</span><span><i style="background:var(--ink-3);opacity:.45"></i>Barra fina: documentos</span></div>';
+  return s;
+}
+function trunc(s,n){ s=String(s); return s.length>n? s.slice(0,n-1)+"…" : s; }
+
+/* ---------------- PROYECTOS ---------------- */
+function vProyectos(pg){
+  const all=proyectos();
+  const comunas=[...new Set(all.map(p=>p.comuna).filter(Boolean))].sort();
+  const resps=[...new Set(all.map(p=>p.responsable).filter(Boolean))].sort();
+  let ps=all.filter(p=>{
+    const f=S.filtro;
+    if(f.comuna && p.comuna!==f.comuna) return false;
+    if(f.resp && p.responsable!==f.resp) return false;
+    if(f.edec && p.estado!==f.edec) return false;
+    if(f.grupo && p.grupo!==f.grupo) return false;
+    if(f.estado){
+      const a=avEtapas(p,pg);
+      if(f.estado==="completo" && a<1) return false;
+      if(f.estado==="proceso" && !(a>0&&a<1)) return false;
+      if(f.estado==="sin" && a>0) return false;
+      if(f.estado==="critico" && a>=.34) return false;
+    }
+    if(f.q){ const q=f.q.toLowerCase();
+      if(!((p.postulante||"")+" "+(p.rol||"")+" "+(p.codigo||"")+" "+(p.rut||"")+" "+(p.comuna||"")+" "+(p.localidad||"")+" "+(p.contratista||"")+" "+(p.grupo||"")+" "+(p.numero||"")).toLowerCase().includes(q)) return false; }
+    return true;
+  });
+  const k=S.sort.k, dir=S.sort.dir;
+  ps.sort((a,b)=>{
+    let x,y;
+    if(k==="avance"){x=avEtapas(a,pg);y=avEtapas(b,pg);}
+    else if(k==="docs"){x=avDocs(a,pg);y=avDocs(b,pg);}
+    else if(k==="numero"){x=a.numero||0;y=b.numero||0;}
+    else {x=String(a[k]||"").toLowerCase();y=String(b[k]||"").toLowerCase();}
+    return x<y?-dir : x>y?dir : 0;
+  });
+  const th=(key,lab,extra)=>`<th class="sortable" onclick="ordenar('${key}')"${extra||""}>${lab}${S.sort.k===key?(dir>0?" ↑":" ↓"):""}</th>`;
+  const edecs=[...new Set(all.map(p=>p.estado).filter(Boolean))].sort();
+  const grupos=[...new Set(all.map(p=>p.grupo).filter(Boolean))].sort();
+  return `
+  <div class="toolbar noprint">
+    <input type="search" id="fq" placeholder="Buscar postulante, código, comuna…" value="${esc(S.filtro.q)}" oninput="setFiltro('q',this.value)">
+    <select onchange="setFiltro('comuna',this.value)"><option value="">Todas las comunas</option>${comunas.map(c=>`<option${c===S.filtro.comuna?" selected":""}>${esc(c)}</option>`).join("")}</select>
+    <select onchange="setFiltro('resp',this.value)"><option value="">Todos los responsables</option>${resps.map(c=>`<option${c===S.filtro.resp?" selected":""}>${esc(c)}</option>`).join("")}</select>
+    ${grupos.length?`<select onchange="setFiltro('grupo',this.value)"><option value="">Todos los grupos</option>${grupos.map(c=>`<option${c===S.filtro.grupo?" selected":""}>${esc(c)}</option>`).join("")}</select>`:""}
+    ${edecs.length?`<select onchange="setFiltro('edec',this.value)"><option value="">Todo estado declarado</option>${edecs.map(c=>`<option${c===S.filtro.edec?" selected":""}>${esc(c)}</option>`).join("")}</select>`:""}
+    <select onchange="setFiltro('estado',this.value)">
+      <option value="">Cualquier estado</option>
+      <option value="critico"${S.filtro.estado==="critico"?" selected":""}>Requiere atención (&lt;34%)</option>
+      <option value="sin"${S.filtro.estado==="sin"?" selected":""}>Sin iniciar</option>
+      <option value="proceso"${S.filtro.estado==="proceso"?" selected":""}>En proceso</option>
+      <option value="completo"${S.filtro.estado==="completo"?" selected":""}>Completos</option>
+    </select>
+    <div style="flex:1"></div>
+
+  </div>
+  <div class="panel">
+    <header><h3>${ps.length} de ${all.length} proyectos</h3><span class="hint">Haz clic en un postulante para abrir su ficha</span></header>
+    <div class="scroll"><table>
+      <thead><tr>${th("numero","N°")}${th("codigo","Código")}${th("postulante","Postulante")}${th("comuna","Comuna")}${th("grupo","Grupo")}${th("estado","Estado declarado")}${th("avance","Avance de etapas")}${th("docs","Docs")}${th("responsable","Responsable")}<th>Últ. actualización</th></tr></thead>
+      <tbody>${ps.map(p=>{
+        const a=avEtapas(p,pg), et=(pg.etapas||[]);
+        const done=et.filter(e=>(((p.etapas||{})[e.id]||{}).estado)==="completa").length;
+        const nna=et.filter(e=>(((p.etapas||{})[e.id]||{}).estado)==="na").length;
+        return `<tr><td class="mono" style="color:var(--ink-3)">${p.numero||"—"}</td>
+          <td class="mono" style="font-size:12px;color:var(--ink-2)">${esc(p.codigo||"—")}</td>
+          <td><button class="rowbtn" onclick="abrir('${esc(p.id)}')">${esc(p.postulante)}</button>${p.localidad?`<div style="font-size:11px;color:var(--ink-3)">${esc(p.localidad)}</div>`:""}</td>
+          <td>${esc(p.comuna||"—")}</td>
+          <td>${p.grupo?`<span class="tag">${esc(p.grupo)}</span>`:'<span style="color:var(--ink-3)">—</span>'}</td>
+          <td>${chipEstado(p.estado)}${p.motivo?`<div style="font-size:11px;color:var(--ink-3);margin-top:2px">${esc(p.motivo)}</div>`:""}</td>
+          <td>${barra(a)}<div style="font-size:11px;color:var(--ink-3);margin-top:1px">${done}/${et.length-nna} etapas completas${nna?` · <span style="color:var(--crit)">${nna} n/c</span>`:""}</div></td>
+          <td>${barra(avDocs(p,pg))}</td>
+          <td style="color:var(--ink-2)">${p.responsable? esc(p.responsable) : '<span style="color:var(--crit);font-size:12px">sin asignar</span>'}</td>
+          <td style="font-size:11.5px;color:var(--ink-3)">${p.updatedAt? new Date(p.updatedAt).toLocaleDateString("es-CL")+(p.updatedBy?" · "+esc(p.updatedBy):"") : "—"}</td></tr>`;
+      }).join("") || '<tr><td colspan="10" class="empty">Ningún proyecto coincide con los filtros.</td></tr>'}</tbody>
+    </table></div>
+  </div>`;
+}
+function setFiltro(k,v){ S.filtro[k]=v; render(); if(k==="q"){const i=$("#fq"); if(i){i.focus();i.setSelectionRange(v.length,v.length);}} }
+function ordenar(k){ if(S.sort.k===k) S.sort.dir*=-1; else {S.sort.k=k;S.sort.dir=1;} render(); }
+</script>
+<script>
+/* ---------------- MATRIZ DE ETAPAS ---------------- */
+function vEtapas(pg){
+  const ps=proyectos(), et=pg.etapas||[];
+  if(!ps.length) return '<div class="panel"><div class="empty">Aún no hay proyectos en este programa.</div></div>';
+  return `
+  <div class="banner noprint"><span>↹</span><span>Haz clic en cualquier casilla para avanzar el estado: <b>No realizada → Parcial → Completa → No corresponde</b>. Lo que queda en «no corresponde» sale del cálculo del porcentaje. Cada cambio se guarda de inmediato para todo el equipo.</span></div>
+  <div class="panel">
+    <header><h3>${ps.length} proyectos × ${et.length} etapas</h3><span class="spacer"></span>
+      <div class="legend">
+        <span><i style="background:var(--good)"></i>Completa</span>
+        <span><i style="background:var(--warn)"></i>Parcial</span>
+        <span><i style="background:var(--surface-3);border-color:var(--line-2)"></i>No realizada</span>
+        <span><i style="background:color-mix(in srgb,var(--crit) 16%,transparent);border-color:var(--crit)"></i>No corresponde</span>
+      </div></header>
+    <div class="scroll"><table class="matrix">
+      <thead><tr><th class="name">Proyecto</th>${et.map(e=>`<th class="rot"><span>${esc(e.nombre)}</span></th>`).join("")}<th style="min-width:74px">Avance</th></tr></thead>
+      <tbody>${ps.map(p=>{
+        const a=avEtapas(p,pg);
+        return `<tr><td class="name"><button class="rowbtn" onclick="abrir('${esc(p.id)}')">${esc(p.postulante)}</button>
+            <div style="font-size:11px;color:var(--ink-3)">${p.grupo?esc(p.grupo)+" · ":""}${p.codigo?esc(p.codigo)+" · ":""}${esc(p.comuna||"")}</div></td>
+          ${et.map(e=>{
+            const ee=(p.etapas||{})[e.id]||{}, st=ee.estado||"no";
+            return `<td><button class="cell st-${st}" title="${esc(p.postulante)} — ${esc(e.nombre)}: ${(EST[st]||EST.no).lab}${st==="na"&&ee.respaldo?" ("+esc(ee.respaldo)+")":""}" aria-label="${esc(e.nombre)}: ${(EST[st]||EST.no).lab}" onclick="ciclarEtapa('${esc(p.id)}','${esc(e.id)}')"><i></i></button></td>`;
+          }).join("")}
+          <td style="padding:4px 8px;min-width:74px">${barra(a)}</td></tr>`;
+      }).join("")}</tbody>
+      <tfoot><tr><td class="name" style="font-weight:600;font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;border-top:1px solid var(--line-2)">Completas</td>
+        ${et.map(e=>{const c=ps.filter(p=>(((p.etapas||{})[e.id]||{}).estado)==="completa").length;
+          const na=ps.filter(p=>(((p.etapas||{})[e.id]||{}).estado)==="na").length;
+          return `<td class="num" style="font-size:11px;color:var(--ink-2);padding:6px 2px;border-top:1px solid var(--line-2)">${c}${na?`<div style="font-size:10px;color:var(--crit)" title="no corresponde">${na} n/c</div>`:""}</td>`;}).join("")}
+        <td style="border-top:1px solid var(--line-2)"></td></tr></tfoot>
+    </table></div>
+  </div>`;
+}
+function ciclarEtapa(pid,eid){ return;
+  const p=S.proys.find(x=>x.id===pid); if(!p) return;
+  const orden=["no","parcial","completa","na"];
+  const cur=((p.etapas||{})[eid]||{}).estado||"no";
+  const next=orden[(orden.indexOf(cur)+1)%4];
+  const et=Object.assign({},p.etapas||{});
+  et[eid]=Object.assign({},et[eid]||{},{estado:next, fecha: next==="no"? "" : (et[eid]&&et[eid].fecha)||todayISO(), responsable:(et[eid]&&et[eid].responsable)||S.autor||""});
+  guardarProy(p,{etapas:et});
+}
+
+/* ---------------- CARPETA DOCUMENTAL ---------------- */
+function vDocs(pg){
+  const ps=proyectos(), bl=pg.bloques||[];
+  if(!ps.length) return '<div class="panel"><div class="empty">Aún no hay proyectos en este programa.</div></div>';
+  const faltan = bl.map(b=>({b,f:ps.filter(p=>{const v=(p.bloques||{})[b.id]||{}; return !v.cargado && !v.na;}).length, na:ps.filter(p=>((p.bloques||{})[b.id]||{}).na).length}));
+  return `
+  <div class="banner noprint"><span>↹</span><span>Cada clic recorre <b>Pendiente → Cargado → No corresponde</b>. Lo marcado como «no corresponde» sale del denominador, así que no baja el porcentaje.</span></div>
+  <div class="panel" style="margin-bottom:14px">
+    <header><h3>Bloques con más faltantes</h3><span class="hint">sobre ${ps.length} proyectos</span></header>
+    <div class="scroll"><table><thead><tr><th>Bloque</th><th>Contenido esperado</th><th style="width:150px">Cargado</th><th style="width:70px">Faltan</th></tr></thead>
+      <tbody>${faltan.slice().sort((a,b)=>b.f-a.f).map(x=>`<tr>
+        <td style="font-weight:600">${esc(x.b.nombre)}</td>
+        <td style="color:var(--ink-2);font-size:12.5px">${esc(x.b.descripcion||"—")}</td>
+        <td>${barra((ps.length-x.na-x.f)/Math.max(1,ps.length-x.na))}${x.na?`<div style="font-size:10.5px;color:var(--crit)">${x.na} no corresponde${x.na>1?"n":""}</div>`:""}</td>
+        <td class="num" style="font-weight:600;color:${x.f? "var(--crit)":"var(--good)"}">${x.f}</td></tr>`).join("")}</tbody></table></div>
+  </div>
+  <div class="panel">
+    <header><h3>Control de carpetas</h3><span class="spacer"></span>
+      <div class="legend"><span><i style="background:var(--accent)"></i>Cargado</span><span><i style="background:var(--surface-3);border-color:var(--line-2)"></i>Pendiente</span><span><i style="background:color-mix(in srgb,var(--crit) 16%,transparent);border-color:var(--crit)"></i>No corresponde</span></div></header>
+    <div class="scroll"><table class="matrix">
+      <thead><tr><th class="name">Proyecto</th>${bl.map(b=>`<th class="rot"><span>${esc(b.nombre)}</span></th>`).join("")}<th style="min-width:74px">Completitud</th></tr></thead>
+      <tbody>${ps.map(p=>`<tr>
+        <td class="name"><button class="rowbtn" onclick="abrir('${esc(p.id)}')">${esc(p.postulante)}</button>
+          <div style="font-size:11px;color:var(--ink-3)">${p.codigo?esc(p.codigo)+" · ":""}${esc(p.comuna||"")}</div></td>
+        ${bl.map(b=>{const on=!!((p.bloques||{})[b.id]||{}).cargado;
+          const bb=(p.bloques||{})[b.id]||{}; const lab= bb.na? "no corresponde" : (on?"cargado":"pendiente");
+          return `<td><button class="cell ${bb.na?"st-na":(on?"st-si":"st-no")}" title="${esc(p.postulante)} — ${esc(b.nombre)}: ${lab}${bb.na&&bb.obs?" ("+esc(bb.obs)+")":""}" aria-label="${esc(b.nombre)}: ${lab}" onclick="toggleBloque('${esc(p.id)}','${esc(b.id)}')"><i></i></button></td>`;}).join("")}
+        <td style="padding:4px 8px">${barra(avDocs(p,pg))}</td></tr>`).join("")}</tbody>
+    </table></div>
+  </div>`;
+}
+function toggleBloque(pid,bid){ return;
+  const p=S.proys.find(x=>x.id===pid); if(!p) return;
+  const bl=Object.assign({},p.bloques||{});
+  const c=bl[bid]||{};
+  let sig;
+  if(c.na) sig={cargado:false,na:false,fecha:""};
+  else if(c.cargado) sig={cargado:false,na:true,fecha:todayISO()};
+  else sig={cargado:true,na:false,fecha:todayISO()};
+  bl[bid]=Object.assign({},c,sig);
+  guardarProy(p,{bloques:bl});
+}
+</script>
+<script>
+/* ---------------- REPORTES ---------------- */
+function vReportes(pg){
+  const ps=proyectos(), n=ps.length, et=pg.etapas||[], bl=pg.bloques||[];
+  const avg = n? ps.reduce((s,p)=>s+avEtapas(p,pg),0)/n : 0;
+  const avgD = n? ps.reduce((s,p)=>s+avDocs(p,pg),0)/n : 0;
+  const d=diasPlazo(pg);
+  const g=agrupaComunas(ps,pg);
+  const hoy=new Date().toLocaleDateString("es-CL",{day:"2-digit",month:"long",year:"numeric"});
+
+  const filasEtapa = et.map(e=>{
+    const c={completa:0,parcial:0,no:0}; ps.forEach(p=>{c[((p.etapas||{})[e.id]||{}).estado||"no"]++;});
+    return {e,c,av:n?(c.completa+c.parcial*.5)/n:0};
+  }).sort((a,b)=>a.av-b.av);
+
+  const filasComuna = Object.keys(g).sort().map(k=>{
+    const l=g[k];
+    return {com:k,n:l.length,
+      av:l.reduce((s,p)=>s+avEtapas(p,pg),0)/l.length,
+      doc:l.reduce((s,p)=>s+avDocs(p,pg),0)/l.length,
+      comp:l.filter(p=>avEtapas(p,pg)>=1).length,
+      cri:l.filter(p=>avEtapas(p,pg)<.34).length};
+  }).sort((a,b)=>b.av-a.av);
+
+  return `
+  <div class="toolbar noprint">
+    <button class="btn pri" onclick="window.print()">Imprimir / guardar PDF</button>
+    <button class="btn" onclick="copiarResumen()">Copiar resumen ejecutivo</button>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <div class="pad" style="border-bottom:1px solid var(--line)">
+      <div class="eyebrow">Informe de avance · ${esc(pg.codigo||"")}</div>
+      <h3 style="font-size:21px;margin:5px 0 3px">${esc(pg.nombre)}</h3>
+      <div style="color:var(--ink-3);font-size:12.5px">Emitido el ${hoy} · ${n} proyectos · ${Object.keys(g).length} comunas${pg.plazo?" · plazo comprometido "+fmtDate(pg.plazo):""}</div>
+    </div>
+    <div class="pad">
+      <p style="margin:0 0 10px;max-width:68ch;font-size:14.5px;line-height:1.62">
+        El conjunto registra un <b>${pct(avg)}% de avance en etapas</b> y un <b>${pct(avgD)}% de completitud documental</b>.
+        ${ps.filter(p=>avEtapas(p,pg)>=1).length} de ${n} proyectos están cerrados,
+        ${ps.filter(p=>avEtapas(p,pg)>0&&avEtapas(p,pg)<1).length} están en desarrollo y
+        ${ps.filter(p=>avEtapas(p,pg)===0).length} no han iniciado ninguna etapa.
+        ${d===null?"El plazo comprometido aún no está definido.":(d<0?"<b style='color:var(--crit)'>El plazo comprometido está vencido hace "+Math.abs(d)+" días.</b>":"Quedan <b>"+d+" días</b> para el plazo comprometido.")}
+        ${filasEtapa.length?"La etapa más rezagada es <b>"+esc(filasEtapa[0].e.nombre)+"</b> ("+pct(filasEtapa[0].av)+"%).":""}
+      </p>
+      <div class="stats" style="border-radius:6px">
+        <div class="stat"><div class="k">Avance etapas</div><div class="v">${pct(avg)}<small>%</small></div></div>
+        <div class="stat"><div class="k">Completitud documental</div><div class="v">${pct(avgD)}<small>%</small></div></div>
+        <div class="stat"><div class="k">Proyectos cerrados</div><div class="v">${ps.filter(p=>avEtapas(p,pg)>=1).length}<small>/${n}</small></div></div>
+        <div class="stat"><div class="k">Bajo 34%</div><div class="v" style="color:var(--crit)">${ps.filter(p=>avEtapas(p,pg)<.34).length}</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <header><h3>1 · Avance global por etapa</h3><span class="hint">Completa = 100%, Parcial = 50%, No realizada = 0%</span></header>
+    <div class="chartwrap"><div id="rpEtapas"></div></div>
+    <div class="scroll"><table>
+      <thead><tr><th>Etapa</th><th style="width:110px">Completas</th><th style="width:100px">Parciales</th><th style="width:110px">No realizadas</th><th style="width:150px">Avance</th></tr></thead>
+      <tbody>${filasEtapa.map(f=>`<tr>
+        <td style="font-weight:600">${esc(f.e.nombre)}</td>
+        <td><span class="tag"><i class="dot" style="background:var(--good)"></i>${f.c.completa}</span></td>
+        <td><span class="tag"><i class="dot" style="background:var(--warn)"></i>${f.c.parcial}</span></td>
+        <td><span class="tag"><i class="dot" style="background:var(--line-2)"></i>${f.c.no}</span></td>
+        <td>${barra(f.av)}</td></tr>`).join("")}</tbody>
+      <tfoot><tr><td style="font-weight:700;border-top:1px solid var(--line-2)">Total conjunto</td>
+        <td colspan="3" style="border-top:1px solid var(--line-2)"></td>
+        <td style="border-top:1px solid var(--line-2)">${barra(avg)}</td></tr></tfoot>
+    </table></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <header><h3>2 · Avance por comuna</h3></header>
+    <div class="scroll"><table>
+      <thead><tr><th>Comuna</th><th style="width:80px">Proyectos</th><th style="width:160px">Etapas</th><th style="width:160px">Documentos</th><th style="width:90px">Cerrados</th><th style="width:110px">Bajo 34%</th></tr></thead>
+      <tbody>${filasComuna.map(f=>`<tr>
+        <td style="font-weight:600">${esc(f.com)}</td><td class="num">${f.n}</td>
+        <td>${barra(f.av)}</td><td>${barra(f.doc)}</td>
+        <td class="num">${f.comp}</td>
+        <td class="num" style="color:${f.cri?"var(--crit)":"var(--ink-3)"};font-weight:${f.cri?600:400}">${f.cri}</td></tr>`).join("")}</tbody>
+    </table></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <header><h3>3 · Checklist documental por beneficiario</h3><span class="hint">${bl.length} bloques exigidos por proyecto</span></header>
+    <div class="scroll"><table>
+      <thead><tr><th style="min-width:210px">Postulante</th><th>Comuna</th><th>Código</th><th style="width:130px">Completitud</th><th>Bloques faltantes</th></tr></thead>
+      <tbody>${ps.map(p=>{
+        const falta=bl.filter(b=>!((p.bloques||{})[b.id]||{}).cargado);
+        return `<tr><td><button class="rowbtn" onclick="abrir('${esc(p.id)}')">${esc(p.postulante)}</button></td>
+          <td>${esc(p.comuna||"—")}</td><td class="mono" style="font-size:12px">${esc(p.codigo||p.rol||"—")}</td>
+          <td>${barra(avDocs(p,pg))}</td>
+          <td style="font-size:12px;color:var(--ink-2)">${falta.length? falta.map(b=>'<span class="tag" style="margin:1px 2px 1px 0">'+esc(b.nombre)+'</span>').join("") : '<span class="tag" style="background:var(--good-soft);border-color:color-mix(in srgb,var(--good) 30%,transparent)"><i class="dot" style="background:var(--good)"></i>Carpeta completa</span>'}</td></tr>`;
+      }).join("")}</tbody>
+    </table></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <header><h3>4 · Alertas y plazos</h3></header>
+    <div class="scroll"><table>
+      <thead><tr><th style="min-width:200px">Postulante</th><th>Comuna</th><th style="width:130px">Avance</th><th>Estado declarado</th><th>Responsable</th><th>Etapas pendientes</th><th style="width:120px">Riesgo</th></tr></thead>
+      <tbody>${ps.slice().sort((a,b)=>avEtapas(a,pg)-avEtapas(b,pg)).map(p=>{
+        const a=avEtapas(p,pg);
+        const pend=et.filter(e=>(((p.etapas||{})[e.id]||{}).estado||"no")!=="completa").length;
+        const r = a>=1?["ok","Cerrado","var(--good)"] : (d!==null&&d<45&&a<.5)?["cr","Crítico","var(--crit)"] : a<.34?["cr","Crítico","var(--crit)"] : a<.7?["wa","Atención","var(--warn)"]:["ok","En curso","var(--s3)"];
+        return `<tr><td><button class="rowbtn" onclick="abrir('${esc(p.id)}')">${esc(p.postulante)}</button></td>
+          <td>${esc(p.comuna||"—")}</td><td>${barra(a)}</td>
+          <td>${chipEstado(p.estado)}</td>
+          <td style="color:var(--ink-2)">${esc(p.responsable||"sin asignar")}</td>
+          <td class="num">${pend} de ${et.length}</td>
+          <td><span class="tag"><i class="dot" style="background:${r[2]}"></i>${r[1]}</span></td></tr>`;
+      }).join("")}</tbody>
+    </table></div>
+  </div>
+
+  ${(()=>{ const ev=evalDe(pg);
+    const nb=ev.bloques.filter(b=>b.cargado).length, ne=ev.etapas.filter(e=>e.estado==="completa").length;
+    return `<div class="panel" style="margin-top:14px">
+      <header><h3>5 · Evaluación previa del encargo</h3><span class="hint">formato de traspaso · ${nb}/10 antecedentes · ${ne}/12 etapas completas</span>
+        <span class="spacer"></span></header>
+      <div class="two" style="gap:0">
+        <div class="scroll" style="border-right:1px solid var(--line)"><table>
+          <thead><tr><th>Antecedente</th><th style="width:120px">Estado</th></tr></thead>
+          <tbody>${ev.bloques.map(b=>`<tr><td style="font-size:12.5px">${esc(b.nombre)}${b.obs?`<div style="font-size:11px;color:var(--ink-3)">${esc(b.obs)}</div>`:""}</td>
+            <td><span class="tag"><i class="dot" style="background:${b.cargado?"var(--good)":"var(--line-2)"}"></i>${b.cargado?"Cargado":"Pendiente"}</span></td></tr>`).join("")}</tbody>
+        </table></div>
+        <div class="scroll"><table>
+          <thead><tr><th>Etapa desarrollada</th><th style="width:120px">Estado</th><th style="width:100px">Fecha</th></tr></thead>
+          <tbody>${ev.etapas.map(e=>`<tr><td style="font-size:12.5px">${esc(e.nombre)}${e.responsable?`<div style="font-size:11px;color:var(--ink-3)">${esc(e.responsable)}</div>`:""}</td>
+            <td><span class="tag"><i class="dot" style="background:${e.estado==="completa"?"var(--good)":(e.estado==="parcial"?"var(--warn)":"var(--line-2)")}"></i>${(EST[e.estado]||EST.no).lab}</span></td>
+            <td style="font-size:12px;color:var(--ink-2)">${e.fecha?fmtDate(e.fecha):"—"}</td></tr>`).join("")}</tbody>
+        </table></div>
+      </div>
+    </div>`; })()}`;
+}
+function dibujarGraficosReporte(pg){
+  const ps=proyectos(), n=ps.length;
+  const filas=(pg.etapas||[]).map(e=>{
+    const c={completa:0,parcial:0,no:0}; ps.forEach(p=>{c[((p.etapas||{})[e.id]||{}).estado||"no"]++;});
+    return {nombre:e.nombre,c,av:n?(c.completa+c.parcial*.5)/n:0};
+  }).sort((a,b)=>a.av-b.av);
+  const el=$("#rpEtapas"); if(el) el.innerHTML=barrasApiladas(filas,n);
+}
+function copiarResumen(){
+  const pg=prog(), ps=proyectos(), n=ps.length;
+  const avg=n?ps.reduce((s,p)=>s+avEtapas(p,pg),0)/n:0, avgD=n?ps.reduce((s,p)=>s+avDocs(p,pg),0)/n:0;
+  const d=diasPlazo(pg);
+  const t=[pg.nombre,
+    "Corte al "+new Date().toLocaleDateString("es-CL"),
+    "Avance de etapas: "+pct(avg)+"%  |  Completitud documental: "+pct(avgD)+"%",
+    "Proyectos: "+n+" ("+ps.filter(p=>avEtapas(p,pg)>=1).length+" cerrados, "+ps.filter(p=>avEtapas(p,pg)<.34).length+" bajo 34%)",
+    d===null? "Plazo sin definir" : (d<0? "Plazo vencido hace "+Math.abs(d)+" días" : "Quedan "+d+" días para el plazo comprometido")].join("\n");
+  navigator.clipboard.writeText(t).then(()=>{const el=$("#syncState");el.textContent="Resumen copiado al portapapeles";setTimeout(estadoSync,3000);},
+    ()=>aviso("El navegador no permitió copiar."));
+}
+
+/* ---------------- EXPORTACIÓN ---------------- */
+function csvCell(v){ v=String(v==null?"":v); return /[",;\n]/.test(v)? '"'+v.replace(/"/g,'""')+'"' : v; }
+async function bajarCSV(nombre,filas){
+  const txt="\uFEFF"+filas.map(f=>f.map(csvCell).join(";")).join("\r\n");
+  if(!S.dl){ aviso("La descarga de archivos no está disponible en esta vista."); return; }
+  try{ await S.dl.save({filename:nombre, data:txt});
+       const el=$("#syncState"); el.textContent="Archivo "+nombre+" guardado"; setTimeout(estadoSync,3500); }
+  catch(e){
+    if(e && e.code==="declined") return;
+    aviso(e && e.code==="too_large" ? "El archivo supera el tamaño permitido." : "No se pudo guardar el archivo.");
+  }
+}
+function exportarCSV(){
+  const pg=prog(), ps=proyectos(), et=pg.etapas||[], bl=pg.bloques||[];
+  const head=["N°","Código","Grupo","Comuna","Localidad","Postulante","RUT","Rol","Contratista","Estado declarado","Motivo","Responsable","Avance etapas %","Completitud docs %"]
+    .concat(et.map(e=>"E: "+e.nombre)).concat(bl.map(b=>"D: "+b.nombre)).concat(["Observaciones","Última actualización"]);
+  const rows=ps.map(p=>[p.numero,p.codigo,p.grupo,p.comuna,p.localidad,p.postulante,p.rut,p.rol,p.contratista,p.estado,p.motivo,p.responsable,pct(avEtapas(p,pg)),pct(avDocs(p,pg))]
+    .concat(et.map(e=>EST[((p.etapas||{})[e.id]||{}).estado||"no"].lab))
+    .concat(bl.map(b=>((p.bloques||{})[b.id]||{}).cargado?"Cargado":"Pendiente"))
+    .concat([p.obs||"", p.updatedAt? new Date(p.updatedAt).toLocaleString("es-CL"):""]));
+  bajarCSV("avance_"+(pg.codigo||"programa")+"_"+todayISO()+".csv",[head].concat(rows));
+}
+function exportarCSVEtapas(){
+  const pg=prog(), ps=proyectos(), et=pg.etapas||[];
+  const rows=[["N°","Código","Comuna","Postulante","Estado declarado","Etapa","Estado","Fecha","Responsable","Respaldo / nota original"]];
+  ps.forEach(p=> et.forEach(e=>{ const v=(p.etapas||{})[e.id]||{};
+    rows.push([p.numero,p.codigo,p.comuna,p.postulante,p.estado,e.nombre,EST[v.estado||"no"].lab,v.fecha||"",v.responsable||"",v.respaldo||""]); }));
+  bajarCSV("etapas_detalle_"+(pg.codigo||"programa")+"_"+todayISO()+".csv",rows);
+}
+</script>
+<script>
+/* ---------------- FICHA (drawer) ---------------- */
+function abrir(id){ S.openId=id; pintarDrawer(); }
+function cerrar(){ S.openId=null; $("#drawer").classList.remove("on"); $("#drawer").setAttribute("aria-hidden","true"); $("#scrim").classList.remove("on"); }
+function pintarDrawer(){
+  const p=S.proys.find(x=>x.id===S.openId), pg=prog();
+  const d=$("#drawer");
+  if(!p||!pg){ cerrar(); return; }
+  const et=pg.etapas||[], bl=pg.bloques||[];
+  d.innerHTML=`
+   <header>
+     <div style="flex:1;min-width:0">
+       <div class="eyebrow">${p.numero?"Proyecto N° "+p.numero+" · ":""}${esc(pg.codigo||pg.nombre)}</div>
+       <h3>${esc(p.postulante)}</h3>
+       <div class="meta">${p.grupo?esc(p.grupo)+" · ":""}${esc(p.comuna||"Sin comuna")}${p.localidad?" · "+esc(p.localidad):""}${p.codigo?' · Código <span class="mono">'+esc(p.codigo)+'</span>':""} · ${esc(p.responsable||"sin responsable")}</div>
+       ${p.estado?`<div style="margin-top:6px">${chipEstado(p.estado)}${p.motivo?` <span style="font-size:11.5px;color:var(--ink-3)">${esc(p.motivo)}</span>`:""}</div>`:""}
+     </div>
+     <button class="x" onclick="cerrar()" aria-label="Cerrar">×</button>
+   </header>
+   <div class="body">
+     <div class="stats">
+       <div class="stat"><div class="k">Avance de etapas</div><div class="v">${pct(avEtapas(p,pg))}<small>%</small></div>
+         <div class="meter"><i style="width:${pct(avEtapas(p,pg))}%;background:${colorAvance(avEtapas(p,pg))}"></i></div></div>
+       <div class="stat"><div class="k">Carpeta documental</div><div class="v">${pct(avDocs(p,pg))}<small>%</small></div>
+         <div class="meter"><i style="width:${pct(avDocs(p,pg))}%;background:var(--s1)"></i></div></div>
+     </div>
+
+     <div class="panel"><header><h3>Identificación</h3></header>
+       <div class="pad grid" style="grid-template-columns:repeat(auto-fit,minmax(148px,1fr))">
+         <div class="fld"><label>N°</label><input value="${esc(p.numero||"")}" onchange="campo('${esc(p.id)}','numero',this.value)"></div>
+         <div class="fld"><label>Código</label><input value="${esc(p.codigo||"")}" onchange="campo('${esc(p.id)}','codigo',this.value)"></div>
+         <div class="fld" style="grid-column:span 2"><label>Postulante</label><input value="${esc(p.postulante||"")}" onchange="campo('${esc(p.id)}','postulante',this.value)"></div>
+         <div class="fld"><label>RUT</label><input value="${esc(p.rut||"")}" onchange="campo('${esc(p.id)}','rut',this.value)"></div>
+         <div class="fld"><label>Comuna</label><input value="${esc(p.comuna||"")}" onchange="campo('${esc(p.id)}','comuna',this.value)"></div>
+         <div class="fld"><label>Localidad</label><input value="${esc(p.localidad||"")}" onchange="campo('${esc(p.id)}','localidad',this.value)"></div>
+         <div class="fld"><label>Rol SII</label><input value="${esc(p.rol||"")}" onchange="campo('${esc(p.id)}','rol',this.value)"></div>
+         <div class="fld" style="grid-column:span 2"><label>Contratista</label><input value="${esc(p.contratista||"")}" onchange="campo('${esc(p.id)}','contratista',this.value)"></div>
+         <div class="fld"><label>Grupo</label><input value="${esc(p.grupo||"")}" placeholder="Ej. Grupo 2" onchange="campo('${esc(p.id)}','grupo',this.value)"></div>
+         <div class="fld"><label>Estado declarado</label><input value="${esc(p.estado||"")}" placeholder="Ej. Falta cierre 100%" onchange="campo('${esc(p.id)}','estado',this.value)"></div>
+         <div class="fld"><label>Motivo</label><input value="${esc(p.motivo||"")}" onchange="campo('${esc(p.id)}','motivo',this.value)"></div>
+         <div class="fld"><label>Responsable</label><input value="${esc(p.responsable||"")}" placeholder="Nombre del profesional" onchange="campo('${esc(p.id)}','responsable',this.value)"></div>
+         <div class="fld" style="grid-column:1/-1"><label>Observaciones</label><textarea rows="2" onchange="campo('${esc(p.id)}','obs',this.value)">${esc(p.obs||"")}</textarea></div>
+       </div>
+     </div>
+
+     <div class="panel"><header><h3>Etapas del proyecto</h3><span class="hint">${et.filter(e=>(((p.etapas||{})[e.id]||{}).estado)==="completa").length} de ${et.filter(e=>(((p.etapas||{})[e.id]||{}).estado)!=="na").length} completas${et.filter(e=>(((p.etapas||{})[e.id]||{}).estado)==="na").length?" · "+et.filter(e=>(((p.etapas||{})[e.id]||{}).estado)==="na").length+" no corresponden":""}</span></header>
+       <div class="pad stagelist">${et.map(e=>{
+         const v=(p.etapas||{})[e.id]||{}, st=v.estado||"no";
+         return `<div class="stagerowe">
+           <div><div class="nm">${esc(e.nombre)}</div>
+             <div class="sub">
+               <label style="display:inline-flex;gap:5px;align-items:center">Fecha <input type="date" value="${esc(v.fecha||"")}" style="border:1px solid var(--line);border-radius:4px;padding:1px 4px;background:var(--surface-2);font-size:11.5px" onchange="etapaCampo('${esc(p.id)}','${esc(e.id)}','fecha',this.value)"></label>
+               <label style="display:inline-flex;gap:5px;align-items:center">Respaldo <input value="${esc(v.respaldo||"")}" placeholder="carpeta / archivo" style="border:1px solid var(--line);border-radius:4px;padding:1px 5px;background:var(--surface-2);font-size:11.5px;width:150px" onchange="etapaCampo('${esc(p.id)}','${esc(e.id)}','respaldo',this.value)"></label>
+             </div></div>
+           <div class="seg">${["no","parcial","completa","na"].map(k=>
+             `<button class="${st===k?"on "+k:""}" title="${k==="na"?"El documento no aplica a este beneficiario: sale del cálculo del porcentaje":""}" onclick="etapaCampo('${esc(p.id)}','${esc(e.id)}','estado','${k}')">${k==="na"?"No corresponde":EST[k].lab}</button>`).join("")}</div>
+         </div>`;
+       }).join("")}</div>
+     </div>
+
+     <div class="panel"><header><h3>Antecedentes cargados</h3><span class="hint">${bl.filter(b=>((p.bloques||{})[b.id]||{}).cargado).length} de ${bl.filter(b=>!((p.bloques||{})[b.id]||{}).na).length}${bl.filter(b=>((p.bloques||{})[b.id]||{}).na).length?" · "+bl.filter(b=>((p.bloques||{})[b.id]||{}).na).length+" no corresponden":""}</span></header>
+       <div class="pad"><div class="docgrid">${bl.map(b=>{
+         const v=(p.bloques||{})[b.id]||{}, on=!!v.cargado, na=!!v.na;
+         return `<label class="doc ${na?"na":(on?"on":"")}" title="Un clic recorre pendiente → cargado → no corresponde"><input type="checkbox" ${on?"checked":""} ${na?"disabled":""} onchange="toggleBloque('${esc(p.id)}','${esc(b.id)}');pintarDrawer()">
+           ${na?`<button type="button" style="all:unset;cursor:pointer;color:var(--crit);font-weight:700;flex:none;line-height:1" title="Volver a pendiente" onclick="event.preventDefault();toggleBloque('${esc(p.id)}','${esc(b.id)}');pintarDrawer()">✕</button>`:""}
+           <span><span class="t">${esc(b.nombre)}${na?'<span class="na-tag">no corresponde</span>':""}</span><span class="d">${esc(na&&v.obs?v.obs:(b.descripcion||""))}</span></span></label>`;
+       }).join("")}</div></div>
+     </div>
+
+     <div style="display:flex;gap:8px;padding-bottom:20px">
+       <div style="flex:1;font-size:11.5px;color:var(--ink-3);align-self:center">${p.updatedAt? "Última actualización "+new Date(p.updatedAt).toLocaleString("es-CL")+(p.updatedBy?" por "+esc(p.updatedBy):"") : "Sin actualizaciones registradas"}</div>
+
+     </div>
+   </div>`;
+  d.classList.add("on"); d.setAttribute("aria-hidden","false"); $("#scrim").classList.add("on");
+}
+function campo(pid,k,v){ return; const p=S.proys.find(x=>x.id===pid); if(!p) return;
+  guardarProy(p,{[k]: k==="numero"? (parseInt(v,10)||null) : v}); pintarDrawer(); }
+function etapaCampo(pid,eid,k,v){ return;
+  const p=S.proys.find(x=>x.id===pid); if(!p) return;
+  const et=Object.assign({},p.etapas||{});
+  const cur=Object.assign({},et[eid]||{});
+  cur[k]=v;
+  if(k==="estado"){ if(v==="no") cur.fecha=""; else if(!cur.fecha) cur.fecha=todayISO();
+    if(!cur.responsable) cur.responsable=S.autor||p.responsable||""; }
+  et[eid]=cur;
+  guardarProy(p,{etapas:et}); pintarDrawer();
+}
+async function eliminarProyecto(pid){ return;
+  const p=S.proys.find(x=>x.id===pid); if(!p) return;
+  if(!confirm("¿Eliminar definitivamente el proyecto de "+p.postulante+"? Esta acción no se puede deshacer.")) return;
+  S.proys=S.proys.filter(x=>x.id!==pid); cerrar(); render();
+  if(S.db){ try{ await S.db.doc("proyectos/"+pid).delete(); }catch(e){ aviso("No se pudo eliminar en la base de datos."); } }
+}
+</script>
+<script>
+/* ---------------- CONFIGURACIÓN ---------------- */
+function vConfig(pg){ return '<div class="panel"><div class="empty">Esta es la vista pública de solo lectura.</div></div>'; }
+function pgCampo(k,v){ return; guardarProg(prog(),{[k]:v}); }
+function setAutor(v){ S.autor=v; try{localStorage.setItem("egis.autor",v);}catch(e){} render(); }
+function uid(pref){ return pref+"_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function agregarEtapa(){ const pg=prog(); const n=prompt("Nombre de la nueva etapa:"); if(!n) return;
+  guardarProg(pg,{etapas:(pg.etapas||[]).concat([{id:uid("e"),nombre:n}])}); }
+function renombrarEtapa(id,n){ const pg=prog(); guardarProg(pg,{etapas:(pg.etapas||[]).map(e=>e.id===id?Object.assign({},e,{nombre:n}):e)}); }
+function moverEtapa(i,d){ const pg=prog(); const a=(pg.etapas||[]).slice(); const j=i+d;
+  if(j<0||j>=a.length) return; const t=a[i]; a[i]=a[j]; a[j]=t; guardarProg(pg,{etapas:a}); }
+function borrarEtapa(id){ const pg=prog(); if(!confirm("¿Eliminar esta etapa? Se perderán los estados registrados en ella.")) return;
+  guardarProg(pg,{etapas:(pg.etapas||[]).filter(e=>e.id!==id)}); }
+function agregarBloque(){ const pg=prog(); const n=prompt("Nombre del bloque documental:"); if(!n) return;
+  guardarProg(pg,{bloques:(pg.bloques||[]).concat([{id:uid("b"),nombre:n,descripcion:""}])}); }
+function editarBloque(id,k,v){ const pg=prog(); guardarProg(pg,{bloques:(pg.bloques||[]).map(b=>b.id===id?Object.assign({},b,{[k]:v}):b)}); }
+function borrarBloque(id){ const pg=prog(); if(!confirm("¿Eliminar este bloque documental?")) return;
+  guardarProg(pg,{bloques:(pg.bloques||[]).filter(b=>b.id!==id)}); }
+
+async function nuevoPrograma(){
+  const n=prompt("Nombre del nuevo programa o encargo:","DS10 · Habitabilidad Rural"); if(!n) return;
+  const base=prog();
+  const p={id:uid("pg"),nombre:n,codigo:"",plazo:"",tipologia:"",coordinador:"",contacto:"",drive:"",
+    etapas:(base&&base.etapas||[]).map(e=>({id:uid("e"),nombre:e.nombre})),
+    bloques:(base&&base.bloques||[]).map(b=>({id:uid("b"),nombre:b.nombre,descripcion:b.descripcion||""}))};
+  S.progs.push(p); S.progId=p.id; S.view="config"; syncNav(); render();
+  if(S.db){ try{ await S.db.doc("programas/"+p.id).set(JSON.parse(JSON.stringify(p))); }catch(e){ aviso("No se pudo crear el programa."); } }
+}
+async function eliminarPrograma(id){
+  const p=S.progs.find(x=>x.id===id); if(!p) return;
+  const n=S.proys.filter(x=>x.programaId===id).length;
+  if(!confirm("¿Eliminar «"+p.nombre+"»"+(n?" y sus "+n+" proyectos":"")+"? No se puede deshacer.")) return;
+  const borrar=S.proys.filter(x=>x.programaId===id).map(x=>x.id);
+  S.progs=S.progs.filter(x=>x.id!==id); S.proys=S.proys.filter(x=>x.programaId!==id);
+  if(S.progId===id) S.progId=(S.progs[0]||{}).id;
+  render();
+  if(S.db){ try{ await S.db.doc("programas/"+id).delete(); for(const b of borrar) await S.db.doc("proyectos/"+b).delete(); }catch(e){ aviso("No se pudo eliminar todo en la base de datos."); } }
+}
+async function crearProyecto(datos){
+  const pg=prog(); if(!pg) return null;
+  const p=Object.assign({id:uid("p"),programaId:pg.id,numero:null,comuna:"",postulante:"",rol:"",codigo:"",rut:"",localidad:"",contratista:"",grupo:"",estado:"",motivo:"",responsable:"",obs:"",etapas:{},bloques:{},
+    updatedAt:new Date().toISOString(),updatedBy:S.autor||"—"},datos);
+  S.proys.push(p);
+  if(S.db){ try{ await S.db.doc("proyectos/"+p.id).set(JSON.parse(JSON.stringify(p))); }catch(e){ aviso("No se pudo guardar el proyecto nuevo."); } }
+  return p;
+}
+async function nuevoProyecto(){
+  const n=prompt("Nombre del postulante:"); if(!n) return;
+  const max=Math.max(0,...proyectos().map(p=>p.numero||0));
+  const p=await crearProyecto({postulante:n.trim(),numero:max+1});
+  render(); if(p) abrir(p.id);
+}
+async function cargarMasivo(){
+  const t=($("#bulk")||{}).value||"";
+  const lineas=t.split("\n").map(s=>s.trim()).filter(Boolean);
+  if(!lineas.length){ aviso("No hay líneas que cargar."); return; }
+  let n=0;
+  for(const l of lineas){
+    const c=l.split(/\t|;|,(?=\s*\S)/).map(s=>s.trim());
+    if(c.length<2) continue;
+    const num=parseInt(c[0],10);
+    const off = isNaN(num)?0:1;
+    await crearProyecto({numero:isNaN(num)?null:num, comuna:c[off]||"", postulante:c[off+1]||c[off]||"", rol:c[off+2]||""});
+    n++;
+  }
+  render();
+  const el=$("#syncState"); el.textContent=n+" proyectos agregados"; setTimeout(estadoSync,3500);
+}
+</script>
+<script>
+/* ============================================================
+   AVANCE TÉCNICO · cartera propia
+   El avance se lee de las carpetas del computador de la EGIS:
+   ingreso en obra (22 documentos) y módulo de postulación (26 carpetas).
+   ============================================================ */
+const FASES=["Sin iniciar","Terreno resuelto","Ingresado en obra","Módulo abierto","En obra y en módulo","Módulo completo"];
+const FASE_COLOR={"Sin iniciar":"var(--line-2)","Terreno resuelto":"var(--serious)","Ingresado en obra":"var(--warn)",
+  "Módulo abierto":"var(--s4)","En obra y en módulo":"var(--s3)","Módulo completo":"var(--good)"};
+function atDe(){ return proyectos().filter(p=>p.at && p.at.obra); }
+function cuadro(st){
+  if(st==="na") return '<i class="nabox" title="No corresponde"></i>';
+  const col= st==="completa"?"var(--good)" : st==="parcial"?"var(--warn)" : "var(--surface-3)";
+  const bd = st==="no"? "var(--line-2)" : "color-mix(in srgb,"+col+" 70%,#000)";
+  return '<i style="display:block;width:13px;height:13px;border-radius:3px;background:'+col+';border:1px solid '+bd+'"></i>';
+}
+function tonoPct(v){ return v>=90?"var(--good)" : v>=60?"var(--s3)" : v>=30?"var(--warn)" : v>0?"var(--serious)":"var(--line-2)"; }
+function chipFase(f){ return `<span class="tag"><i class="dot" style="background:${FASE_COLOR[f]||"var(--ink-3)"}"></i>${esc(f||"—")}</span>`; }
+function miniBar(v,tot,color){
+  const p=tot? Math.round(v/tot*100):0;
+  return `<div class="bar"><div class="track"><div class="fill" style="width:${p}%;background:${color||tonoPct(p)}"></div></div><b style="width:46px">${v}/${tot}</b></div>`;
+}
+function vAvanceTecnico(pg){
+  const ps=atDe();
+  if(!ps.length) return '<div class="panel"><div class="empty">Esta cartera no tiene beneficiarios con avance técnico medido.</div></div>';
+  const n=ps.length;
+  const enObra=ps.filter(p=>p.at.obra.ingresado).length;
+  const enMod=ps.filter(p=>p.at.modulo.ingresado).length;
+  const pObra=Math.round(ps.reduce((s,p)=>s+p.at.obra.pct,0)/n);
+  const pMod=Math.round(ps.reduce((s,p)=>s+p.at.modulo.pct,0)/n);
+  const global=Math.round((pObra+pMod)/2);
+  const conAbs=ps.filter(p=>p.at.absorcion).length;
+  const ajenos=ps.reduce((s,p)=>s+(p.at.modulo.ajenos||0),0);
+  const nocorr=ps.reduce((s,p)=>s+(p.at.modulo.na||0)+(p.at.obra.na||0),0);
+  const listaNC=ps.flatMap(p=>(p.at.noCorresponden||[]).map(x=>({p:p.postulante,x})));
+  const mb=ps.reduce((s,p)=>s+(p.at.modulo.mb||0),0);
+  const arch=ps.reduce((s,p)=>s+(p.at.modulo.archivos||0),0);
+  const dias=ps.map(p=>p.at.modulo.diasSinMovimiento).filter(v=>v!=null);
+  const corte=(ps[0].at.actualizado||"").replace("T"," ");
+  const orden=ps.slice().sort((a,b)=>(b.at.obra.pct+b.at.modulo.pct)-(a.at.obra.pct+a.at.modulo.pct));
+
+  // embudo
+  const cuenta={}; FASES.forEach(f=>cuenta[f]=0);
+  ps.forEach(p=>{ cuenta[p.at.fase]=(cuenta[p.at.fase]||0)+1; });
+
+  // frentes agregados
+  const frentes={};
+  ps.forEach(p=>(p.at.frentes||[]).forEach(f=>{
+    frentes[f.nombre]=frentes[f.nombre]||{ok:0,tot:0};
+    frentes[f.nombre].ok+=f.ok; frentes[f.nombre].tot+=f.tot; }));
+  const frArr=Object.keys(frentes).map(k=>({lab:k,...frentes[k],pct:Math.round(frentes[k].ok/frentes[k].tot*100)}))
+    .sort((a,b)=>b.pct-a.pct);
+
+  // etapas del módulo agregadas (solo sobre los que tienen carpeta)
+  const conMod=ps.filter(p=>p.at.modulo.ingresado);
+  const etapas=(pg.etapas||[]).map(e=>{
+    const c=conMod.filter(p=>((p.etapas||{})[e.id]||{}).estado==="completa").length;
+    const pa=conMod.filter(p=>((p.etapas||{})[e.id]||{}).estado==="parcial").length;
+    const nn=conMod.filter(p=>((p.etapas||{})[e.id]||{}).estado==="na").length;
+    return {nombre:e.nombre,ok:c,par:pa,na:nn,tot:conMod.length||1};
+  });
+  const docs=(pg.bloques||[]).map(b=>{
+    const c=ps.filter(p=>p.at.obra.ingresado && ((p.bloques||{})[b.id]||{}).cargado).length;
+    return {nombre:b.nombre,ok:c,tot:ps.filter(p=>p.at.obra.ingresado).length||1};
+  });
+
+  const alertas=[];
+  if(ajenos) alertas.push(["wa",ajenos,"Carpetas con documentos de otras personas",
+    "En el módulo hay "+ajenos+" carpeta"+(ajenos>1?"s":"")+" con contenido, pero ninguno de los archivos está a nombre del beneficiario. Cuentan como carpeta ocupada, no como documento entregado."]);
+  const sinNada=ps.filter(p=>p.at.fase==="Sin iniciar").length;
+  if(sinNada) alertas.push(["cr",sinNada,"Sin ninguna carpeta abierta",
+    sinNada+" beneficiario"+(sinNada>1?"s":"")+" no tiene carpeta de obra ni módulo de postulación, y tampoco informe de absorción."]);
+  if(conAbs) alertas.push(["ok",conAbs,"Terreno resuelto, esperando apertura",
+    conAbs+" beneficiario"+(conAbs>1?"s":"")+" ya tiene informe de absorción pero todavía no se le abre carpeta de obra."]);
+  if(nocorr) alertas.push(["ok",nocorr,"Carpetas marcadas «no corresponde»",
+    listaNC.length? listaNC.map(o=>o.p.split(" ")[0]+": "+o.x).join(" · ")+". No se cuentan en el porcentaje."
+                  : nocorr+" carpetas quedaron fuera del cálculo porque el documento no aplica a ese beneficiario."]);
+  const detenido=ps.filter(p=>p.at.modulo.diasSinMovimiento!=null && p.at.modulo.diasSinMovimiento>60);
+  if(detenido.length) alertas.push(["wa",detenido.length,"Expedientes sin movimiento",
+    "Más de 60 días sin archivos nuevos: "+detenido.map(p=>p.postulante).join(", ")+"."]);
+
+  const fichas=orden.filter(p=>p.at.obra.ingresado||p.at.modulo.ingresado).map(p=>{
+    const a=p.at;
+    return `<div class="panel" style="margin-bottom:14px">
+      <header><h3>${esc(p.postulante)}</h3>
+        <span class="hint">${esc(p.comuna||"")} · RUKAN ${esc(p.codigo||"—")} · rol ${esc(p.rol||"—")}</span>
+        <span class="spacer"></span>${chipFase(a.fase)}</header>
+      <div class="stats" style="border:0;border-bottom:1px solid var(--line);border-radius:0">
+        <div class="stat"><div class="k">Ingreso en obra</div><div class="v">${a.obra.pct}<small>%</small></div>
+          <div class="m">${a.obra.completos} de ${a.obra.base!=null?a.obra.base:a.obra.total} documentos${a.obra.na?" · "+a.obra.na+" fuera del cálculo":""}</div></div>
+        <div class="stat"><div class="k">Módulo de postulación</div><div class="v">${a.modulo.pct}<small>%</small></div>
+          <div class="m">${a.modulo.completos} de ${a.modulo.base!=null?a.modulo.base:a.modulo.total} carpetas${a.modulo.na?" · "+a.modulo.na+" no corresponde"+(a.modulo.na>1?"n":""):""}</div></div>
+        <div class="stat"><div class="k">Volumen del expediente</div><div class="v">${a.modulo.archivos}<small> arch.</small></div>
+          <div class="m">${a.modulo.mb} MB en carpeta</div></div>
+        <div class="stat"><div class="k">Último movimiento</div><div class="v" style="font-size:19px">${esc(a.modulo.ultimoMovimiento||"—")}</div>
+          <div class="m">${a.modulo.diasSinMovimiento!=null? "hace "+a.modulo.diasSinMovimiento+" días" : "sin registro"}</div></div>
+      </div>
+      <div class="two" style="gap:0">
+        <div class="scroll" style="border-right:1px solid var(--line)">
+          <table><thead><tr><th colspan="2">Documentos de ingreso en obra · ${a.obra.completos}/${a.obra.base!=null?a.obra.base:a.obra.total}${a.obra.na?" · "+a.obra.na+" no corresponde"+(a.obra.na>1?"n":""):""}</th></tr></thead>
+          <tbody>${a.obra.ingresado? a.obra.docs.map(d=>`<tr>
+            <td style="width:22px">${cuadro(d.na?"na":(d.ok?"completa":"no"))}</td>
+            <td style="font-size:12.5px">${esc(d.nombre)}${d.na?'<span class="na-tag">no corresponde</span>':""}
+              ${d.archivo?`<div class="mono" style="font-size:10.5px;color:var(--ink-3);word-break:break-all">${esc(d.archivo)}</div>`:""}</td>
+          </tr>`).join("") : '<tr><td class="empty">Sin carpeta de obra.</td></tr>'}</tbody></table>
+        </div>
+        <div class="scroll">
+          <table><thead><tr><th colspan="2">Carpetas del módulo · ${a.modulo.completos} con documento, ${a.modulo.parciales} solo con ajenos${a.modulo.na?", "+a.modulo.na+" no corresponde"+(a.modulo.na>1?"n":""):""}</th></tr></thead>
+          <tbody>${a.modulo.ingresado? (pg.etapas||[]).map(e=>{
+            const v=(p.etapas||{})[e.id]||{}; const st=v.estado||"no";
+            return `<tr>
+              <td style="width:22px">${cuadro(st)}</td>
+              <td style="font-size:12.5px">${esc(e.nombre)}${st==="na"?'<span class="na-tag">no corresponde</span>':""}
+                <div style="font-size:10.5px;color:${st==="na"?"var(--crit)":"var(--ink-3)"}">${esc(v.respaldo||"")}${v.fecha?" · "+esc(v.fecha):""}</div></td></tr>`;
+          }).join("") : '<tr><td class="empty">Sin carpeta MP_.</td></tr>'}</tbody></table>
+        </div>
+      </div>
+      ${a.faltantes && a.faltantes.length? `<div class="pad" style="border-top:1px solid var(--line)">
+        <div class="eyebrow" style="margin-bottom:6px">Carpetas vacías · ${a.faltantes.length}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">${a.faltantes.map(f=>`<span class="tag">${esc(f)}</span>`).join("")}</div></div>`:""}
+      <div class="pad" style="padding-top:10px;border-top:1px solid var(--line);font-size:11px;color:var(--ink-3)">
+        ${a.obra.carpeta?`<div class="mono" style="word-break:break-all">Obra: ${esc(a.obra.carpeta)}</div>`:""}
+        ${a.modulo.carpeta?`<div class="mono" style="word-break:break-all;margin-top:3px">Módulo: ${esc(a.modulo.carpeta)}</div>`:""}
+      </div>
+    </div>`;}).join("");
+
+  return `
+  <div class="stats" style="margin-bottom:14px">
+    <div class="stat"><div class="k">Avance técnico global</div><div class="v" style="color:${tonoPct(global)}">${global}<small>%</small></div>
+      <div class="meter"><i style="width:${global}%;background:${tonoPct(global)}"></i></div>
+      <div class="m">promedio de obra y módulo</div></div>
+    <div class="stat"><div class="k">Ingresados en obra</div><div class="v">${enObra}<small>/${n}</small></div>
+      <div class="meter"><i style="width:${enObra/n*100}%;background:${tonoPct(enObra/n*100)}"></i></div>
+      <div class="m">avance documental ${pObra}%</div></div>
+    <div class="stat"><div class="k">En módulo de postulación</div><div class="v">${enMod}<small>/${n}</small></div>
+      <div class="meter"><i style="width:${enMod/n*100}%;background:${tonoPct(enMod/n*100)}"></i></div>
+      <div class="m">avance de carpetas ${pMod}%</div></div>
+    <div class="stat"><div class="k">Volumen en carpeta</div><div class="v">${arch}<small> arch.</small></div>
+      <div class="m">${mb.toFixed(0)} MB · ${ajenos} carpeta${ajenos===1?"":"s"} con contenido ajeno${nocorr?" · "+nocorr+" no corresponde"+(nocorr>1?"n":""):""}</div></div>
+    <div class="stat"><div class="k">Último movimiento</div><div class="v" style="font-size:20px">${dias.length? "hace "+Math.min(...dias)+" d" : "—"}</div>
+      <div class="m">corte ${esc(corte)}</div></div>
+  </div>
+
+  <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);align-items:start;margin-bottom:14px">
+    <div class="panel">
+      <header><h3>Etapa del proceso</h3><span class="hint">en qué punto está cada beneficiario</span></header>
+      <div class="scroll"><table><tbody>${FASES.map(f=>`<tr>
+        <td style="font-size:12.5px">${chipFase(f)}</td>
+        <td style="width:170px"><div class="bar"><div class="track"><div class="fill" style="width:${Math.round((cuenta[f]||0)/n*100)}%;background:${FASE_COLOR[f]}"></div></div><b>${cuenta[f]||0}</b></div></td>
+      </tr>`).join("")}</tbody></table></div>
+    </div>
+    <div class="panel">
+      <header><h3>Alertas</h3><span class="hint">${alertas.length} activa${alertas.length===1?"":"s"}</span></header>
+      <div>${alertas.map(a=>`<div class="alert ${a[0]}"><div class="ic">${esc(a[1])}</div><div><div class="t">${esc(a[2])}</div><div class="d">${esc(a[3])}</div></div></div>`).join("")}</div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <header><h3>Estado por beneficiario</h3><span class="hint">el avance se lee de las carpetas, nadie lo marca a mano</span></header>
+    <div class="scroll"><table class="cards">
+      <thead><tr><th style="min-width:220px">Beneficiario</th><th>Comuna</th><th>RUKAN</th><th style="width:150px">Etapa</th>
+        <th style="width:145px">Obra</th><th style="width:145px">Módulo</th><th class="num">Archivos</th><th class="num">MB</th>
+        <th>Último mov.</th><th>Absorción</th></tr></thead>
+      <tbody>${orden.map(p=>{const a=p.at; return `<tr>
+        <td class="tit" data-l=""><button class="rowbtn" onclick="abrir('${esc(p.id)}')">${esc(p.postulante)}</button>
+          <div style="font-size:11px;color:var(--ink-3)">${esc([p.comuna,p.codigo?"RUKAN "+p.codigo:""].filter(Boolean).join(" · "))}</div></td>
+        <td data-l="Comuna" class="solo-ancho">${esc(p.comuna||"—")}</td>
+        <td class="mono solo-ancho" data-l="RUKAN" style="font-size:12px;color:var(--ink-2)">${esc(p.codigo||"—")}</td>
+        <td data-l="Etapa">${chipFase(a.fase)}</td>
+        <td data-l="Obra">${a.obra.ingresado? miniBar(a.obra.completos,a.obra.total) : '<span style="color:var(--ink-3)">sin carpeta</span>'}</td>
+        <td data-l="Módulo">${a.modulo.ingresado? miniBar(a.modulo.completos,a.modulo.total) : '<span style="color:var(--ink-3)">sin carpeta</span>'}</td>
+        <td class="num" data-l="Archivos" style="color:var(--ink-2)">${a.modulo.archivos||"—"}</td>
+        <td class="num" data-l="MB" style="color:var(--ink-2)">${a.modulo.mb||"—"}</td>
+        <td data-l="Último mov." style="font-size:11.5px;color:var(--ink-2)"><span>${esc(a.modulo.ultimoMovimiento||"—")}${a.modulo.diasSinMovimiento!=null?` · hace ${a.modulo.diasSinMovimiento} d`:""}</span></td>
+        <td data-l="Absorción" style="font-size:11.5px;color:var(--ink-2)">${a.absorcion? esc(a.absorcion) : '<span style="color:var(--ink-3)">—</span>'}</td>
+      </tr>`;}).join("")}</tbody>
+    </table></div>
+  </div>
+
+  <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start;margin-bottom:14px">
+    <div class="panel">
+      <header><h3>Frentes de trabajo</h3><span class="hint">sobre las 26 carpetas</span></header>
+      <div class="scroll"><table><tbody>${frArr.map(f=>`<tr>
+        <td style="font-size:12.5px">${esc(f.lab)}</td>
+        <td style="width:120px"><div class="bar"><div class="track"><div class="fill" style="width:${f.pct}%;background:${tonoPct(f.pct)}"></div></div><b>${f.pct}%</b></div></td>
+      </tr>`).join("")}</tbody></table></div>
+    </div>
+    <div class="panel">
+      <header><h3>Carpetas del módulo</h3><span class="hint">sobre ${conMod.length} expediente${conMod.length===1?"":"s"} abierto${conMod.length===1?"":"s"}</span></header>
+      <div class="scroll" style="max-height:520px"><table><tbody>${etapas.map(e=>`<tr>
+        <td style="font-size:12px">${esc(e.nombre)}</td>
+        <td style="width:126px">${e.na?`<span class="tag" style="border-color:var(--crit);color:var(--crit)"><i class="dot" style="background:var(--crit)"></i>no corresponde</span>`:(e.ok?`<span class="tag"><i class="dot" style="background:var(--good)"></i>${e.ok}</span>`:(e.par?`<span class="tag"><i class="dot" style="background:var(--warn)"></i>ajeno</span>`:`<span class="tag"><i class="dot" style="background:var(--line-2)"></i>vacía</span>`))}</td>
+      </tr>`).join("")}</tbody></table></div>
+    </div>
+    <div class="panel">
+      <header><h3>Documentos de obra</h3><span class="hint">sobre ${enObra} carpeta${enObra===1?"":"s"} abierta${enObra===1?"":"s"}</span></header>
+      <div class="scroll" style="max-height:520px"><table><tbody>${docs.map(d=>`<tr>
+        <td style="font-size:12px">${esc(d.nombre)}</td>
+        <td style="width:70px">${d.ok?`<span class="tag"><i class="dot" style="background:var(--good)"></i>${d.ok}</span>`:`<span class="tag"><i class="dot" style="background:var(--line-2)"></i>—</span>`}</td>
+      </tr>`).join("")}</tbody></table></div>
+    </div>
+  </div>
+
+  <div class="eyebrow" style="margin:18px 0 8px">Detalle por expediente</div>
+  ${fichas || '<div class="panel"><div class="empty">Ningún beneficiario tiene carpeta abierta todavía.</div></div>'}`;
+}
+</script>
+
+<script>
+/* ============================================================
+   FUENTES DE DATOS · qué archivo alimenta cada parte del sistema
+   ============================================================ */
+const USO={
+  activa:{lab:"En uso",color:"var(--good)",bg:"var(--good-soft)"},
+  pendiente:{lab:"Por incorporar",color:"var(--warn)",bg:"var(--warn-soft)"},
+  descartada:{lab:"No se usa",color:"var(--ink-3)",bg:"var(--surface-2)"}
+};
+function chipUso(u){ const x=USO[u]||USO.descartada;
+  return `<span class="tag" style="background:${x.bg};border-color:color-mix(in srgb,${x.color} 35%,transparent)"><i class="dot" style="background:${x.color}"></i>${x.lab}</span>`; }
+function rutaCompleta(f){
+  const r=(f.ruta||"").trim(), a=(f.archivo||"").trim();
+  if(!r) return a;
+  if(/^[A-Za-z]:\\/.test(r) && /\.(xls[xm]?|pdf|csv)$/i.test(a)) return r.replace(/\\+$/,"")+"\\"+a;
+  return r;
+}
+function vFuentes(pg){
+  const grupos=S.progs.map(x=>({pg:x,fuentes:(x.fuentes||[])})).filter(g=>g.fuentes.length);
+  if(!grupos.length) return '<div class="panel"><div class="empty">Todavía no hay fuentes registradas.</div></div>';
+  const todas=grupos.flatMap(g=>g.fuentes);
+  const act=todas.filter(f=>f.uso==="activa").length;
+  const desc=todas.filter(f=>f.uso==="descartada").length;
+  const pend=todas.filter(f=>f.uso==="pendiente").length;
+  const carpetas=[...new Set(todas.filter(f=>f.uso!=="descartada").map(f=>f.ruta).filter(r=>/^[A-Za-z]:\\/.test(r||"")))].sort();
+  const ult=todas.map(f=>f.ultimaCarga).filter(Boolean).sort().pop();
+
+  const bloque=g=>{
+    const act=g.fuentes.filter(f=>f.uso!=="descartada");
+    const no=g.fuentes.filter(f=>f.uso==="descartada");
+    const fila=f=>`<tr>
+      <td style="min-width:210px"><div style="font-weight:600;font-size:12.5px">${esc(f.parte)}</div>
+        ${f.nota?`<div style="font-size:11.5px;color:var(--ink-3);line-height:1.45;max-width:56ch">${esc(f.nota)}</div>`:""}</td>
+      <td style="min-width:230px"><div class="mono" style="font-size:11.5px;color:var(--ink)">${esc(f.archivo)}</div>
+        ${f.hoja && f.hoja!=="—"?`<div style="font-size:11px;color:var(--ink-3)">Hoja: ${esc(f.hoja)}</div>`:""}</td>
+      <td style="min-width:250px"><div class="mono" style="font-size:11px;color:var(--ink-2);word-break:break-all">${esc(rutaCompleta(f))}</div></td>
+      <td style="width:120px">${chipUso(f.uso)}
+        ${f.ultimaCarga?`<div style="font-size:11px;color:var(--ink-3);margin-top:3px">Importado ${esc(new Date(f.ultimaCarga).toLocaleDateString("es-CL"))}</div>`:""}</td>
+    </tr>`;
+    return `<div class="panel" style="margin-bottom:14px">
+      <header><h3>${esc(g.pg.nombre)}</h3><span class="hint">${esc(g.pg.codigo||"")} · ${S.proys.filter(p=>p.programaId===g.pg.id).length} proyectos</span></header>
+      <div class="scroll"><table>
+        <thead><tr><th>Qué alimenta</th><th>Archivo</th><th>Ruta</th><th>Estado</th></tr></thead>
+        <tbody>${act.map(fila).join("")}</tbody>
+        ${no.length?`<tbody><tr><td colspan="4" style="background:var(--surface-2);font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)">Archivos y hojas que el sistema NO está usando</td></tr>${no.map(fila).join("")}</tbody>`:""}
+      </table></div>
+    </div>`;
+  };
+
+  return `
+  <div class="stats" style="margin-bottom:14px">
+    <div class="stat"><div class="k">Fuentes en uso</div><div class="v">${act}</div>
+      <div class="m">${grupos.length} carteras</div></div>
+    <div class="stat"><div class="k">Descartadas</div><div class="v" style="color:var(--ink-3)">${desc}</div>
+      <div class="m">duplicados y versiones antiguas</div></div>
+    <div class="stat"><div class="k">Por incorporar</div><div class="v" style="color:${pend?"var(--warn)":"var(--ink-3)"}">${pend}</div>
+      <div class="m">disponibles pero aún no leídas</div></div>
+    <div class="stat"><div class="k">Última importación</div><div class="v" style="font-size:19px">${ult? esc(new Date(ult).toLocaleDateString("es-CL")) : "—"}</div>
+      <div class="m">${ult? "desde el botón Importar planilla" : "todavía no se importa desde la página"}</div></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <header><h3>Carpetas de origen</h3><span class="hint">en el computador de la EGIS</span></header>
+    <div class="pad" style="display:flex;flex-direction:column;gap:7px">
+      ${carpetas.map(r=>`<div class="mono" style="font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:5px;padding:7px 10px;word-break:break-all">${esc(r)}</div>`).join("")}
+      <p style="margin:4px 0 0;font-size:11.5px;color:var(--ink-3);max-width:70ch">Los datos no se leen solos desde estas carpetas: entran por el botón <b>Importar planilla</b> de la vista Proyectos, o por la sincronización diaria cuando esté aprobada en el computador.</p>
+    </div>
+  </div>
+
+  ${grupos.map(bloque).join("")}`;
+}
+</script>
+
+<script>
+/* ============================================================
+   CARTERA CRÍTICA · ficha de expediente
+   Fuente: PHR_1_CSR_Cartera_Critica_2026.xlsm (Nomina_CC) + Cartera_Critica.xlsx
+   ============================================================ */
+const uf = v => (v==null||v==="") ? "—" : Number(v).toLocaleString("es-CL",{maximumFractionDigits:1});
+const tramoRSH = v => { if(v==null||v==="") return "—"; const n=Number(String(v).replace(",",".")); return isNaN(n)? String(v) : (n<=1? Math.round(n*100)+"%" : n+"%"); };
+function ccDe(){ return proyectos().filter(p=>p.cc && p.cc.expediente); }
+function tonoEspera(a){ return a==null?"var(--ink-3)" : a>=9?"var(--crit)" : a>=7?"var(--serious)" : a>=5?"var(--warn)":"var(--s3)"; }
+function tonoDeficit(d){ const s=(d||"").toLowerCase(); return s==="alta"?"var(--crit)" : s==="media"?"var(--warn)" : s==="baja"?"var(--s3)":"var(--ink-3)"; }
+function critico(p){
+  const c=p.cc||{}; let n=0;
+  if((c.esperaAnios||0)>=9) n++;
+  if((c.deficit||"").toLowerCase()==="alta") n++;
+  if(/renunci|fallec|propiedad|repar|usufructo|problema/i.test(c.situacion||"")) n+=2;
+  if((c.edad||0)>=75) n++;
+  if(!c.rol || !c.inscripcion) n++;
+  return n;
+}
+function vCartera(pg){
+  const ps=ccDe();
+  if(!ps.length) return '<div class="panel"><div class="empty">Este programa no tiene expedientes de cartera crítica cargados.<br><span style="font-size:12px">Importa <b>PHR_1_CSR_Cartera_Critica_2026.xlsm</b> o <b>Cartera_Critica.xlsx</b> desde el botón «Importar planilla».</span></div></div>';
+  const n=ps.length;
+  const totalUF=ps.reduce((s,p)=>s+(p.cc.subsidio||0),0);
+  const esperas=ps.map(p=>p.cc.esperaAnios).filter(v=>v!=null);
+  const espProm=esperas.length? esperas.reduce((a,b)=>a+b,0)/esperas.length : null;
+  const altas=ps.filter(p=>(p.cc.deficit||"").toLowerCase()==="alta").length;
+  const conObs=ps.filter(p=>p.cc.situacion).length;
+  const mayores=ps.filter(p=>(p.cc.edad||0)>=70).length;
+
+  // partidas agregadas
+  const part={};
+  ps.forEach(p=>(p.cc.partidas||[]).forEach(x=>{ part[x.nombre]=(part[x.nombre]||0)+(x.uf||0); }));
+  const partArr=Object.keys(part).map(k=>({lab:k,uf:part[k]})).sort((a,b)=>b.uf-a.uf);
+  const maxPart=Math.max(...partArr.map(x=>x.uf),1);
+
+  const orden=ps.slice().sort((a,b)=>critico(b)-critico(a) || (b.cc.esperaAnios||0)-(a.cc.esperaAnios||0));
+  const maxEsp=Math.max(...ps.map(p=>p.cc.esperaAnios||0),1);
+  const propios=new Set(ps.map(p=>nrmTxt(p.postulante)));
+  const regTodos=(pg.ccRegional||[]);
+  const reg=regTodos.filter(r=>!propios.has(nrmTxt(r.nombre)));
+  const regCruce=regTodos.length-reg.length;
+  const porComuna={}; ps.forEach(p=>{ const k=p.cc.comuna||"Sin comuna"; (porComuna[k]=porComuna[k]||{n:0,uf:0}); porComuna[k].n++; porComuna[k].uf+=p.cc.subsidio||0; });
+
+  return `
+  <div class="stats" style="margin-bottom:14px">
+    <div class="stat"><div class="k">Expedientes críticos</div><div class="v">${n}</div>
+      <div class="m">${Object.keys(porComuna).length} comunas · EGR ${esc(ps[0].cc.egr||"—")}</div></div>
+    <div class="stat"><div class="k">Subsidio comprometido</div><div class="v">${uf(Math.round(totalUF))}<small> UF</small></div>
+      <div class="m">promedio ${uf(Math.round(totalUF/n))} UF por expediente</div></div>
+    <div class="stat"><div class="k">Espera promedio</div><div class="v" style="color:${tonoEspera(espProm)}">${espProm==null?"—":espProm.toFixed(1)}<small> años</small></div>
+      <div class="m">desde la selección o postulación</div></div>
+    <div class="stat"><div class="k">Déficit alto</div><div class="v" style="color:${altas?"var(--crit)":"var(--ink)"}">${altas}<small>/${n}</small></div>
+      <div class="m">${mayores} postulante${mayores===1?"":"s"} de 70 años o más</div></div>
+    <div class="stat"><div class="k">Con situación observada</div><div class="v" style="color:${conObs?"var(--warn)":"var(--ink)"}">${conObs}</div>
+      <div class="m">requieren gestión antes de continuar</div></div>
+  </div>
+
+  <div class="grid" style="grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start;margin-bottom:14px">
+    <div class="panel">
+      <header><h3>Antigüedad del expediente</h3><span class="hint">años desde la selección o postulación · rojo sobre 9 años</span></header>
+      <div class="scroll"><table><tbody>${ps.slice().sort((a,b)=>(b.cc.esperaAnios||0)-(a.cc.esperaAnios||0)).map(p=>{
+        const c=p.cc, a=c.esperaAnios;
+        return `<tr>
+          <td style="min-width:200px"><button class="rowbtn" onclick="abrir('${esc(p.id)}')">${esc(p.postulante)}</button>
+            <div style="font-size:11px;color:var(--ink-3)">Exp. ${esc(c.expediente)} · ${esc(c.comuna)}${c.anio?" · sel. "+esc(c.anio):""}</div></td>
+          <td style="width:190px"><div class="bar"><div class="track"><div class="fill" style="width:${Math.round((a||0)/maxEsp*100)}%;background:${tonoEspera(a)}"></div></div><b>${a==null?"—":a.toFixed(1)}</b></div></td>
+          <td style="width:96px"><span class="tag"><i class="dot" style="background:${tonoDeficit(c.deficit)}"></i>${esc(c.deficit||"—")}</span></td>
+        </tr>`; }).join("")}</tbody></table></div>
+    </div>
+    <div class="panel">
+      <header><h3>Subsidio por partida</h3><span class="hint">UF sumadas de los ${n} expedientes</span></header>
+      <div class="scroll"><table><tbody>${partArr.map(x=>`<tr>
+        <td style="font-size:12.5px">${esc(x.lab)}</td>
+        <td style="width:150px"><div class="bar"><div class="track"><div class="fill" style="width:${Math.round(x.uf/maxPart*100)}%;background:var(--s1)"></div></div><b style="width:52px">${uf(x.uf)}</b></div></td>
+      </tr>`).join("")}</tbody>
+      <tfoot><tr><td style="font-weight:700;border-top:1px solid var(--line-2)">Total</td>
+        <td class="num" style="font-weight:700;border-top:1px solid var(--line-2);text-align:right;padding-right:12px">${uf(Math.round(totalUF))} UF</td></tr></tfoot></table></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <header><h3>Ficha de expedientes</h3><span class="hint">ordenados por criticidad</span><span class="spacer"></span>
+      <span class="hint">${esc(pg.ccFuentes||"")}</span></header>
+    <div class="scroll"><table>
+      <thead><tr><th>Exp.</th><th style="min-width:210px">Postulante</th><th>Comuna / localidad</th><th>Sel.</th><th>Espera</th><th>Déficit</th><th>RSH</th><th>Grupo</th><th>Edad</th><th>Superficie</th><th>Rol avalúo</th><th class="num">Subsidio UF</th><th style="min-width:180px">Situación</th></tr></thead>
+      <tbody>${orden.map(p=>{const c=p.cc; return `<tr>
+        <td class="mono" style="font-size:12px;color:var(--ink-2)">${esc(c.expediente)}</td>
+        <td><button class="rowbtn" onclick="abrir('${esc(p.id)}')">${esc(p.postulante)}</button>
+          ${c.fono?`<div style="font-size:11px;color:var(--ink-3)">${esc(c.fono)}</div>`:""}</td>
+        <td>${esc(c.comuna)}${c.localidad?`<div style="font-size:11px;color:var(--ink-3)">${esc(c.localidad)}</div>`:""}</td>
+        <td class="num" style="color:var(--ink-2)">${esc(c.anio||"—")}</td>
+        <td><span class="tag"><i class="dot" style="background:${tonoEspera(c.esperaAnios)}"></i>${c.esperaAnios==null?"—":c.esperaAnios.toFixed(1)+" a"}</span></td>
+        <td><span class="tag"><i class="dot" style="background:${tonoDeficit(c.deficit)}"></i>${esc(c.deficit||"—")}</span></td>
+        <td class="num" style="color:var(--ink-2)">${esc(tramoRSH(c.rsh))}</td>
+        <td class="num" style="color:var(--ink-2)">${c.grupoFamiliar??"—"}</td>
+        <td class="num" style="color:var(--ink-2)">${c.edad??"—"}</td>
+        <td class="num" style="color:var(--ink-2)">${c.superficie==null?"—":uf(c.superficie)+" m²"}</td>
+        <td class="mono" style="font-size:11.5px;color:var(--ink-2)">${esc(c.rol||"—")}</td>
+        <td class="num" style="font-weight:600">${uf(c.subsidio)}</td>
+        <td style="font-size:12px">${c.situacion?`<span class="tag" style="background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 40%,transparent);white-space:normal">${esc(c.situacion)}</span>`:'<span style="color:var(--ink-3)">—</span>'}</td>
+      </tr>`;}).join("")}</tbody>
+      <tfoot><tr><td colspan="11" style="font-weight:700;border-top:1px solid var(--line-2)">Total comprometido</td>
+        <td class="num" style="font-weight:700;border-top:1px solid var(--line-2)">${uf(Math.round(totalUF))}</td>
+        <td style="border-top:1px solid var(--line-2)"></td></tr></tfoot>
+    </table></div>
+  </div>
+
+  <div class="two" style="align-items:start">
+    <div class="panel">
+      <header><h3>Predio y dominio</h3><span class="hint">antecedente legal del terreno</span></header>
+      <div class="scroll"><table>
+        <thead><tr><th style="min-width:180px">Postulante</th><th>Rol de avalúo</th><th class="num">Superficie</th><th>Inscripción</th></tr></thead>
+        <tbody>${orden.map(p=>{const c=p.cc; const falta=!c.rol||!c.inscripcion;
+          return `<tr><td style="font-size:12.5px">${esc(p.postulante)}</td>
+          <td class="mono" style="font-size:11.5px">${esc(c.rol||"—")}</td>
+          <td class="num">${c.superficie==null?"—":uf(c.superficie)+" m²"}</td>
+          <td style="font-size:12px;color:${falta?"var(--crit)":"var(--ink-2)"}">${esc(c.inscripcion||"sin inscripción registrada")}</td></tr>`;}).join("")}</tbody>
+      </table></div>
+    </div>
+    <div class="panel">
+      <header><h3>Cartera crítica regional</h3><span class="hint">otras entidades de gestión rural del Maule</span></header>
+      ${regCruce?`<div class="alert wa"><div class="ic">!</div><div><div class="t">${regCruce} expediente${regCruce===1?"":"s"} aparece${regCruce===1?"":"n"} en las dos listas</div><div class="d">Figuran en la cartera regional a nombre de otra EGR, pero en la nómina de Futuro salen como propios. Conviene aclararlo con el SERVIU antes de seguir invirtiendo horas.</div></div></div>`:""}
+      ${reg.length?`<div class="scroll"><table>
+        <thead><tr><th style="min-width:180px">Postulante</th><th>EGR</th><th>Comuna</th><th>Déficit</th><th class="num">UF</th></tr></thead>
+        <tbody>${reg.map(r=>`<tr><td style="font-size:12.5px">${esc(r.nombre)}</td>
+          <td style="font-size:12px;color:var(--ink-2)">${esc(r.egr||"—")}</td>
+          <td>${esc(r.comuna||"—")}</td>
+          <td><span class="tag"><i class="dot" style="background:${tonoDeficit(r.deficit)}"></i>${esc(r.deficit||"—")}</span></td>
+          <td class="num">${uf(r.subsidio)}</td></tr>`).join("")}</tbody>
+        <tfoot><tr><td colspan="4" style="font-weight:600;border-top:1px solid var(--line-2)">${reg.length} expedientes de otras EGR</td>
+          <td class="num" style="font-weight:700;border-top:1px solid var(--line-2)">${uf(Math.round(reg.reduce((s,r)=>s+(r.subsidio||0),0)))}</td></tr></tfoot>
+      </table></div>`:'<div class="empty">Sin datos regionales cargados.</div>'}
+    </div>
+  </div>`;
+}
+</script>
+
+<script>
+/* ============================================================
+   EVALUACIÓN PREVIA · formato de traspaso (secciones 2, 3 y 4 del PDF)
+   Se guarda a nivel de programa, no de proyecto.
+   ============================================================ */
+const EVAL_BLOQUES=[
+ ["Social","RSH, composición familiar, cédulas, diagnósticos y formularios disponibles."],
+ ["Legal","Dominio, títulos, autorizaciones, certificados y antecedentes del predio."],
+ ["Administrativo","PHR, contratos, convenios, cartas Gantt, códigos o avances RUKAN."],
+ ["Terreno","Levantamiento y registro de la calicata disponibles para cada proyecto."],
+ ["Servicios","Factibilidades eléctricas, de agua potable y de alcantarillado disponibles."],
+ ["Sanitario","Confirmar si el proyecto sanitario fue ingresado a la SEREMI, indicando fecha y comprobante."],
+ ["Emplazamiento","Archivo de emplazamiento en DWG disponible para cada proyecto."],
+ ["Arquitectura","Planimetrías actualizadas de las viviendas que se están utilizando."],
+ ["Trazabilidad","Correos, actas, minutas, observaciones, acuerdos y gestiones institucionales."],
+ ["Otros","Cualquier archivo adicional, incluso incompleto, observado o desactualizado, indicando su estado."]];
+const EVAL_ETAPAS=["Validación de la demanda","Antecedentes sociales","Antecedentes legales y dominio",
+ "Levantamientos","Registros de calicatas","Factibilidades de servicios","Ingreso sanitario a SEREMI",
+ "Emplazamientos DWG","Planimetrías de viviendas utilizadas","Carga o avance en RUKAN",
+ "Contratos, convenios y programación","Otras gestiones realizadas"];
+
+function evalDe(pg){
+  const ev = pg.evaluacion || {};
+  const bl = EVAL_BLOQUES.map(([n,c],i)=>{
+    const g=(ev.bloques||[]).find(x=>x.nombre===n) || (ev.bloques||[])[i] || {};
+    return {nombre:n, contenido:c, cargado:!!g.cargado, obs:g.obs||""};
+  });
+  const et = EVAL_ETAPAS.map((n,i)=>{
+    const g=(ev.etapas||[]).find(x=>x.nombre===n) || (ev.etapas||[])[i] || {};
+    return {nombre:n, estado:g.estado||"no", fecha:g.fecha||"", responsable:g.responsable||"", respaldo:g.respaldo||""};
+  });
+  return {bloques:bl, etapas:et};
+}
+function guardarEval(patch){
+  const pg=prog(); if(!pg) return;
+  const ev=evalDe(pg);
+  patch(ev);
+  guardarProg(pg,{evaluacion:{bloques:ev.bloques,etapas:ev.etapas}});
+}
+function evBloque(i,campo,valor){ return; guardarEval(ev=>{ ev.bloques[i][campo]= campo==="cargado"? !!valor : valor; }); }
+function evEtapa(i,campo,valor){ return; guardarEval(ev=>{ const e=ev.etapas[i]; e[campo]=valor;
+  if(campo==="estado"){ if(valor==="no") e.fecha=""; else if(!e.fecha) e.fecha=todayISO(); } }); }
+
+function vEval(pg){
+  const ev=evalDe(pg);
+  const nb=ev.bloques.filter(b=>b.cargado).length;
+  const ne=ev.etapas.filter(e=>e.estado==="completa").length;
+  const avEt=ev.etapas.reduce((s,e)=>s+EST[e.estado].w,0)/ev.etapas.length;
+  const d=diasPlazo(pg);
+  const sel=(v,val)=>v===val?" selected":"";
+  return `
+  <div class="stats" style="margin-bottom:14px">
+    <div class="stat"><div class="k">Antecedentes cargados</div><div class="v">${nb}<small>/10</small></div>
+      <div class="meter"><i style="width:${nb*10}%;background:var(--s1)"></i></div>
+      <div class="m">Sección 3 del formato</div></div>
+    <div class="stat"><div class="k">Etapas informadas</div><div class="v">${pct(avEt)}<small>%</small></div>
+      <div class="meter"><i style="width:${pct(avEt)}%;background:${colorAvance(avEt)}"></i></div>
+      <div class="m">${ne} completas de 12</div></div>
+    <div class="stat"><div class="k">Nómina del encargo</div><div class="v">${proyectos().length}</div>
+      <div class="m">beneficiarios cargados</div></div>
+    <div class="stat"><div class="k">Plazo comprometido</div><div class="v">${d===null?"—":(d<0?"−"+Math.abs(d):d)}<small>${d===null?"":" días"}</small></div>
+      <div class="m">${pg.plazo? fmtDate(pg.plazo) : "Sin definir"}</div></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <header><h3>2 · Respuesta ejecutiva</h3><span class="hint">definiciones que pide el formato de traspaso</span></header>
+    <div class="scroll"><table>
+      <thead><tr><th style="min-width:210px">Definición</th><th style="min-width:250px">Respuesta</th><th>Respaldo</th></tr></thead>
+      <tbody>
+        <tr><td style="font-weight:600">Fecha límite SERVIU</td>
+          <td><input type="date" value="${esc(pg.plazo||"")}" style="border:1px solid var(--line);border-radius:5px;padding:4px 7px;background:var(--surface-2)" onchange="pgCampo('plazo',this.value)"></td>
+          <td><input value="${esc(pg.respaldoPlazo||"")}" placeholder="Comunicación / instrucción" style="width:100%;border:1px solid var(--line);border-radius:5px;padding:4px 7px;background:var(--surface-2)" onchange="pgCampo('respaldoPlazo',this.value)"></td></tr>
+        <tr><td style="font-weight:600">Tipología única CSR</td>
+          <td style="display:flex;gap:6px;align-items:center">
+            <select style="border:1px solid var(--line);border-radius:5px;padding:4px 6px;background:var(--surface-2)" onchange="pgCampo('tipologiaUnica',this.value)">
+              <option value=""${sel(pg.tipologiaUnica||"","")}>—</option><option value="si"${sel(pg.tipologiaUnica,"si")}>Sí</option><option value="no"${sel(pg.tipologiaUnica,"no")}>No</option></select>
+            <input value="${esc(pg.tipologia||"")}" placeholder="Nombre de la tipología" style="flex:1;border:1px solid var(--line);border-radius:5px;padding:4px 7px;background:var(--surface-2)" onchange="pgCampo('tipologia',this.value)"></td>
+          <td><input value="${esc(pg.respaldoTipologia||"")}" placeholder="Planimetrías vigentes" style="width:100%;border:1px solid var(--line);border-radius:5px;padding:4px 7px;background:var(--surface-2)" onchange="pgCampo('respaldoTipologia',this.value)"></td></tr>
+        <tr><td style="font-weight:600">Tipología existente</td>
+          <td><select style="border:1px solid var(--line);border-radius:5px;padding:4px 6px;background:var(--surface-2)" onchange="pgCampo('tipologiaExistente',this.value)">
+              <option value=""${sel(pg.tipologiaExistente||"","")}>—</option><option value="si"${sel(pg.tipologiaExistente,"si")}>Sí</option><option value="no"${sel(pg.tipologiaExistente,"no")}>No</option></select></td>
+          <td><input value="${esc(pg.tipologiaCodigo||"")}" placeholder="Código / versión" style="width:100%;border:1px solid var(--line);border-radius:5px;padding:4px 7px;background:var(--surface-2)" onchange="pgCampo('tipologiaCodigo',this.value)"></td></tr>
+        <tr><td style="font-weight:600">Requiere nueva tipología</td>
+          <td><select style="border:1px solid var(--line);border-radius:5px;padding:4px 6px;background:var(--surface-2)" onchange="pgCampo('requiereNueva',this.value)">
+              <option value=""${sel(pg.requiereNueva||"","")}>—</option><option value="si"${sel(pg.requiereNueva,"si")}>Sí</option><option value="no"${sel(pg.requiereNueva,"no")}>No</option></select></td>
+          <td><input value="${esc(pg.justificacion||"")}" placeholder="Justificación" style="width:100%;border:1px solid var(--line);border-radius:5px;padding:4px 7px;background:var(--surface-2)" onchange="pgCampo('justificacion',this.value)"></td></tr>
+        <tr><td style="font-weight:600">Responsable de coordinación</td>
+          <td><input value="${esc(pg.coordinador||"")}" style="width:100%;border:1px solid var(--line);border-radius:5px;padding:4px 7px;background:var(--surface-2)" onchange="pgCampo('coordinador',this.value)"></td>
+          <td><input value="${esc(pg.contacto||"")}" placeholder="Correo / teléfono" style="width:100%;border:1px solid var(--line);border-radius:5px;padding:4px 7px;background:var(--surface-2)" onchange="pgCampo('contacto',this.value)"></td></tr>
+        <tr><td style="font-weight:600">Carpeta de respaldos</td>
+          <td colspan="2"><input value="${esc(pg.drive||"")}" placeholder="https://…" style="width:100%;border:1px solid var(--line);border-radius:5px;padding:4px 7px;background:var(--surface-2)" onchange="pgCampo('drive',this.value)"></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <header><h3>3 · Antecedentes para la evaluación</h3><span class="hint">${nb} de 10 bloques cargados</span></header>
+    <div class="scroll"><table>
+      <thead><tr><th style="width:150px">Bloque</th><th>Contenido a cargar</th><th style="width:110px">Estado</th><th style="width:210px">Observación</th></tr></thead>
+      <tbody>${ev.bloques.map((b,i)=>`<tr>
+        <td style="font-weight:600;text-transform:uppercase;font-size:11.5px;letter-spacing:.04em">${esc(b.nombre)}</td>
+        <td style="color:var(--ink-2);font-size:12.5px">${esc(b.contenido)}</td>
+        <td><label style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px;font-weight:600;color:${b.cargado?"var(--good)":"var(--ink-3)"}">
+          <input type="checkbox" ${b.cargado?"checked":""} style="accent-color:var(--accent);width:15px;height:15px" onchange="evBloque(${i},'cargado',this.checked)">Cargado</label></td>
+        <td><input value="${esc(b.obs||"")}" placeholder="—" style="width:100%;border:1px solid var(--line);border-radius:5px;padding:3px 7px;background:var(--surface-2);font-size:12px" onchange="evBloque(${i},'obs',this.value)"></td>
+      </tr>`).join("")}</tbody>
+    </table></div>
+  </div>
+
+  <div class="panel">
+    <header><h3>4 · Etapas ya desarrolladas</h3><span class="hint">${ne} completas · ${ev.etapas.filter(e=>e.estado==="parcial").length} parciales</span></header>
+    <div class="scroll"><table>
+      <thead><tr><th style="min-width:230px">Etapa</th><th style="width:230px">Estado</th><th style="width:130px">Fecha</th><th style="width:160px">Responsable</th><th style="min-width:180px">Respaldo / ubicación</th></tr></thead>
+      <tbody>${ev.etapas.map((e,i)=>`<tr>
+        <td style="font-weight:600">${esc(e.nombre)}</td>
+        <td><div class="seg">${["completa","parcial","no"].map(k=>
+          `<button class="${e.estado===k?"on "+k:""}" onclick="evEtapa(${i},'estado','${k}')">${EST[k].lab}</button>`).join("")}</div></td>
+        <td><input type="date" value="${esc(e.fecha||"")}" style="width:100%;border:1px solid var(--line);border-radius:5px;padding:3px 6px;background:var(--surface-2);font-size:12px" onchange="evEtapa(${i},'fecha',this.value)"></td>
+        <td><input value="${esc(e.responsable||"")}" placeholder="—" style="width:100%;border:1px solid var(--line);border-radius:5px;padding:3px 7px;background:var(--surface-2);font-size:12px" onchange="evEtapa(${i},'responsable',this.value)"></td>
+        <td><input value="${esc(e.respaldo||"")}" placeholder="carpeta / archivo" style="width:100%;border:1px solid var(--line);border-radius:5px;padding:3px 7px;background:var(--surface-2);font-size:12px" onchange="evEtapa(${i},'respaldo',this.value)"></td>
+      </tr>`).join("")}</tbody>
+    </table></div>
+  </div>`;
+}
+</script>
+
+<script>
+/* ============================================================
+   IMPORTACIÓN / EXPORTACIÓN DE PLANILLAS  (SheetJS)
+   Lee dos formatos:
+   · "Planilla vinculada Control EGIS"  (hojas 1..8)
+   · "ESTADOS DE EGIS FUTURO.xlsm"      (hoja 100%)
+   ============================================================ */
+const P_CIERRE="CIERRE-PV";
+const MAP_ESTADOS={
+  "1. Programas":"programas","2. Etapas":"etapas","3. Bloques":"bloques","4. Nómina":"nomina"
+};
+function isoD(v){
+  if(v instanceof Date && !isNaN(v)) return new Date(v.getTime()-v.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+  const s=String(v==null?"":v).trim();
+  let m=s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m) return m[1]+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[3]).slice(-2);
+  m=s.match(/\b(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})\b/);
+  if(m) return m[3]+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[1]).slice(-2);
+  return "";
+}
+/* Una celda de avance -> {estado, fecha, nota}.
+   vEstado: la celda de estado (o la celda única en la planilla vinculada).
+   vFecha:  la columna de fecha aparte, cuando existe (formato ESTADOS xlsm). */
+function celdaEtapa(vEstado,vFecha){
+  const f = vFecha===undefined? "" : isoD(vFecha);
+  const raw = (vEstado instanceof Date && !isNaN(vEstado)) ? "" : String(vEstado==null?"":vEstado).trim();
+  const u = raw.toUpperCase();
+  const salida=(estado,nota,fecha)=>({estado:estado, fecha: estado==="no"? "" : (fecha!==undefined?fecha:(f||isoD(raw))), nota:nota});
+
+  if(/^N\s*\/\s*A$|^NO\s*APLICA$|^NO\s*CORRESPONDE$/.test(u)) return salida("na","No corresponde a este proyecto");
+  if(vEstado instanceof Date && !isNaN(vEstado)) return salida("completa","", f || isoD(vEstado));
+  if(!raw) return f? salida("completa","Registrado solo con fecha",f) : salida("no","");
+  if(/^(PARCIAL|P)$/.test(u)) return salida("parcial","");
+  if(/^(COMPLETA|C)$/.test(u)) return salida("completa","");
+  if(u.includes("NO PAGO")) return salida("no",raw);
+  if(u.includes("OK")) return salida("completa", u==="OK"?"":raw);
+  if(u==="ONLINE"||u==="PENDIENTE"||u==="OFICINA"||u==="CASA PENDIENTE"||u.startsWith("ONLINE")) return salida("parcial",raw);
+  if(u.includes("FALTA")) return /\d{2}[-\/]\d{2}/.test(u) ? salida("parcial",raw)
+        : salida("no", (u==="FALTA"||u==="FALTAN")?"":raw);
+  if(u.includes("SIN ")) return salida("no",raw);
+  if(isoD(raw)) return salida("completa", raw.length>10?raw:"");
+  if(/^\d{2}-?\d{6}$/.test(u)) return salida("completa","Fecha: "+raw);
+  return salida("parcial",raw);
+}
+function siNo(v){ const u=String(v==null?"":v).trim().toUpperCase(); return u==="SI"||u==="SÍ"||u==="OK"||u==="X"||u==="TRUE"||u==="1"; }
+function normComuna(v){
+  let s=String(v==null?"":v).trim(); if(!s) return "";
+  s=s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
+  const fix={"HUALANE":"Hualañé","LICANTEN":"Licantén","CUREPTO":"Curepto","TENO":"Teno","ROMERAL":"Romeral",
+    "MOLINA":"Molina","SAGRADA FAMILIA":"Sagrada Familia","CURICO":"Curicó","RAUCO":"Rauco","VICHUQUEN":"Vichuquén",
+    "SAN JAVIER":"San Javier","TALCA":"Talca","PENCAHUE":"Pencahue","CONSTITUCION":"Constitución"};
+  return fix[s] || s.toLowerCase().replace(/(^|\s)\S/g,c=>c.toUpperCase());
+}
+function normEstadoProy(v){
+  let s=String(v==null?"":v).replace(/_/g," ").trim().toUpperCase(); if(!s) return "";
+  if(s.startsWith("CERRADO AL 100")) return "Cerrado al 100%";
+  if(s.includes("CERRADO")&&s.includes("FALTA")) return "Cerrado, falta certificado 100%";
+  if(s.startsWith("CERRADO")) return "Cerrado";
+  if(s.startsWith("CERRAR")) return "Por cerrar";
+  if(s.includes("FALTA CIERRE 100")) return "Falta cierre 100%";
+  if(s.includes("FALTA CIERRE 50")) return "Falta cierre 50%";
+  if(s.includes("FALTA CERTIFICADO50")||s.includes("FALTA CERTIFICADO 50")) return "Falta certificado 50%";
+  if(s.includes("CERTIFICADO 100% PENDIENTE")) return "Certificado 100% pendiente";
+  if(s.includes("PEDIR NO PAGO")) return "Pedir no pago";
+  if(s.includes("RENUNCIA")) return "Renuncia";
+  if(s==="50%LISTO") return "50% listo";
+  if(s==="100%LISTO") return "100% listo";
+  return s.charAt(0)+s.slice(1).toLowerCase();
+}
+const txt=v=>String(v==null?"":v).trim();
+function filas(wbk,nombre){
+  const ws=wbk.Sheets[nombre]; if(!ws) return [];
+  return XLSX.utils.sheet_to_json(ws,{header:1,raw:true,cellDates:true,defval:null});
+}
+function hojaQueEmpieza(wbk,re){ return wbk.SheetNames.filter(n=>re.test(n)); }
+function codDeHoja(n){ const t=n.trim().split(/\s+/); return t[t.length-1]; }
+
+/* ---------- construir el plan de cambios ---------- */
+function planDesdePlanilla(wbk){
+  const plan={programas:{},proyectos:{},avisos:[],origen:"Planilla vinculada"};
+  const upProg=(cod)=>{ cod=txt(cod)||P_CIERRE;
+    if(!plan.programas[cod]){
+      const ex=S.progs.find(x=>(x.codigo||"")===cod);
+      plan.programas[cod]=ex? JSON.parse(JSON.stringify(ex)) : {id:uid("pg"),codigo:cod,nombre:cod,etapas:[],bloques:[]};
+    }
+    return plan.programas[cod]; };
+
+  // 1. Programas
+  const fp=filas(wbk,"1. Programas");
+  const esCodigo=v=>/^[A-Za-z0-9][A-Za-z0-9._-]{0,19}$/.test(txt(v));
+  for(let i=1;i<fp.length;i++){ const r=fp[i]; if(!r||!esCodigo(r[0])||!txt(r[1])) continue;
+    const pg=upProg(r[0]);
+    if(txt(r[1])) pg.nombre=txt(r[1]);
+    if(txt(r[2])) pg.plazo=isoD(r[2]);
+    if(txt(r[3])) pg.modalidad=txt(r[3]);
+    if(txt(r[4])) pg.tipologia=txt(r[4]);
+    if(txt(r[5])) pg.tipologiaUnica=siNo(r[5])?"si":"no";
+    if(txt(r[6])) pg.tipologiaCodigo=txt(r[6]);
+    if(txt(r[7])) pg.requiereNueva=siNo(r[7])?"si":"no";
+    if(txt(r[8])) pg.justificacion=txt(r[8]);
+    if(txt(r[9])) pg.coordinador=txt(r[9]);
+    if(txt(r[10])) pg.contacto=txt(r[10]);
+    if(txt(r[11])) pg.drive=txt(r[11]);
+  }
+  // 2. Etapas  (conserva ids por nombre para no perder avance)
+  const fe=filas(wbk,"2. Etapas");
+  if(fe.length>1){
+    const porProg={};
+    for(let i=1;i<fe.length;i++){ const r=fe[i]; if(!r||!esCodigo(r[0])||!txt(r[2])) continue;
+      (porProg[txt(r[0])]=porProg[txt(r[0])]||[]).push({orden:parseFloat(r[1])||i,nombre:txt(r[2]),descripcion:txt(r[3]),responsable:txt(r[4])}); }
+    Object.keys(porProg).forEach(cod=>{ const pg=upProg(cod);
+      const previas=pg.etapas||[];
+      pg.etapas=porProg[cod].sort((a,b)=>a.orden-b.orden).map(x=>{
+        const vieja=previas.find(e=>e.nombre.toLowerCase()===x.nombre.toLowerCase());
+        return {id:vieja?vieja.id:uid("e"),nombre:x.nombre,descripcion:x.descripcion||(vieja&&vieja.descripcion)||"",responsable:x.responsable||""};
+      });
+    });
+  }
+  // 3. Bloques
+  const fb=filas(wbk,"3. Bloques");
+  if(fb.length>1){
+    const porProg={};
+    for(let i=1;i<fb.length;i++){ const r=fb[i]; if(!r||!esCodigo(r[0])||!txt(r[1])) continue;
+      (porProg[txt(r[0])]=porProg[txt(r[0])]||[]).push({nombre:txt(r[1]),descripcion:txt(r[2])}); }
+    Object.keys(porProg).forEach(cod=>{ const pg=upProg(cod); const previas=pg.bloques||[];
+      pg.bloques=porProg[cod].map(x=>{ const v=previas.find(b=>b.nombre.toLowerCase()===x.nombre.toLowerCase());
+        return {id:v?v.id:uid("b"),nombre:x.nombre,descripcion:x.descripcion||(v&&v.descripcion)||""}; }); });
+  }
+  // 4. Nómina
+  const fn=filas(wbk,"4. Nómina");
+  for(let i=1;i<fn.length;i++){ const r=fn[i]; if(!r) continue;
+    const cod=txt(r[0]), num=parseInt(r[1],10), nom=txt(r[5]);
+    if(!esCodigo(cod)||!nom||isNaN(num)) continue;
+    const pg=upProg(cod);
+    const key=cod+"#"+num;
+    const ex=S.proys.find(x=>x.programaId===pg.id && x.numero===num) ||
+             S.proys.find(x=>x.programaId===pg.id && (x.postulante||"").toLowerCase()===nom.toLowerCase());
+    const p=ex? JSON.parse(JSON.stringify(ex)) : {id:uid("p"),programaId:pg.id,etapas:{},bloques:{},obs:""};
+    p.programaId=pg.id; p.numero=num; p.postulante=nom;
+    p.codigo=txt(r[2])||p.codigo||""; p.comuna=normComuna(r[3])||p.comuna||"";
+    p.localidad=txt(r[4])||p.localidad||""; p.rut=txt(r[6])||p.rut||"";
+    p.rol=txt(r[7])||p.rol||""; p.contratista=txt(r[8])||p.contratista||"";
+    p.responsable=txt(r[9])||p.responsable||""; p.estado=normEstadoProy(r[10])||p.estado||"";
+    p.motivo=txt(r[11])||p.motivo||""; p.obs=txt(r[12])||p.obs||""; p.grupo=txt(r[13])||p.grupo||"";
+    p._nuevo=!ex;
+    plan.proyectos[key]=p;
+  }
+  // 9/10. Evaluación previa (secciones 3 y 4 del formato de traspaso)
+  const fa=filas(wbk,hojaQueEmpieza(wbk,/antecedentes/i)[0]||"__");
+  if(fa.length>1){
+    for(let i=1;i<fa.length;i++){ const r=fa[i]; if(!r||!esCodigo(r[0])||!txt(r[1])) continue;
+      const pg=upProg(r[0]); const ev=pg.evaluacion||{bloques:[],etapas:[]};
+      const nom=txt(r[1]);
+      const j=(ev.bloques||[]).findIndex(b=>b.nombre.toLowerCase()===nom.toLowerCase());
+      const item={nombre:nom,contenido:txt(r[2]),cargado:siNo(r[3]),obs:txt(r[4])};
+      if(j>=0) ev.bloques[j]=item; else (ev.bloques=ev.bloques||[]).push(item);
+      ev.etapas=ev.etapas||[]; pg.evaluacion=ev;
+    }
+  }
+  const fx=filas(wbk,hojaQueEmpieza(wbk,/etapas desarrolladas/i)[0]||"__");
+  if(fx.length>1){
+    for(let i=1;i<fx.length;i++){ const r=fx[i]; if(!r||!esCodigo(r[0])||!txt(r[1])) continue;
+      const pg=upProg(r[0]); const ev=pg.evaluacion||{bloques:[],etapas:[]};
+      const nom=txt(r[1]);
+      const c=celdaEtapa(txt(r[2])||undefined, r[3]);
+      const item={nombre:nom,estado:c.estado,fecha:c.estado==="no"?"":(isoD(r[3])||c.fecha),responsable:txt(r[4]),respaldo:txt(r[5])};
+      const j=(ev.etapas||[]).findIndex(e=>e.nombre.toLowerCase()===nom.toLowerCase());
+      if(j>=0) ev.etapas[j]=item; else (ev.etapas=ev.etapas||[]).push(item);
+      ev.bloques=ev.bloques||[]; pg.evaluacion=ev;
+    }
+  }
+
+  // 5/7. Avance   6/8. Documentos
+  hojaQueEmpieza(wbk,/avance/i).forEach(hn=>{
+    const cod=codDeHoja(hn), pg=plan.programas[cod]; if(!pg) return;
+    const f=filas(wbk,hn); if(f.length<2) return;
+    const cols=f[0].slice(2).map(txt);
+    for(let i=1;i<f.length;i++){ const r=f[i]; if(!r) continue;
+      const num=parseInt(r[0],10); if(isNaN(num)) continue;
+      const p=plan.proyectos[cod+"#"+num] || (()=>{ const ex=S.proys.find(x=>x.programaId===pg.id&&x.numero===num);
+        if(!ex) return null; const c=JSON.parse(JSON.stringify(ex)); plan.proyectos[cod+"#"+num]=c; return c; })();
+      if(!p) continue;
+      p.etapas=p.etapas||{};
+      cols.forEach((cn,k)=>{ if(!cn) return;
+        const et=(pg.etapas||[]).find(e=>e.nombre.toLowerCase()===cn.toLowerCase()); if(!et) return;
+        const c=celdaEtapa(r[2+k], undefined);
+        p.etapas[et.id]={estado:c.estado,fecha:c.fecha,responsable:(p.etapas[et.id]||{}).responsable||et.responsable||"",respaldo:c.nota};
+      });
+    }
+  });
+  hojaQueEmpieza(wbk,/docs|documentos/i).forEach(hn=>{
+    const cod=codDeHoja(hn), pg=plan.programas[cod]; if(!pg) return;
+    const f=filas(wbk,hn); if(f.length<2) return;
+    const cols=f[0].slice(2).map(txt);
+    for(let i=1;i<f.length;i++){ const r=f[i]; if(!r) continue;
+      const num=parseInt(r[0],10); if(isNaN(num)) continue;
+      const p=plan.proyectos[cod+"#"+num] || (()=>{ const ex=S.proys.find(x=>x.programaId===pg.id&&x.numero===num);
+        if(!ex) return null; const c=JSON.parse(JSON.stringify(ex)); plan.proyectos[cod+"#"+num]=c; return c; })();
+      if(!p) continue;
+      p.bloques=p.bloques||{};
+      cols.forEach((cn,k)=>{ if(!cn) return;
+        const bl=(pg.bloques||[]).find(b=>b.nombre.toLowerCase()===cn.toLowerCase()); if(!bl) return;
+        const v=r[2+k]; const on=siNo(v);
+        p.bloques[bl.id]={cargado:on,fecha:on?((p.bloques[bl.id]||{}).fecha||todayISO()):"",obs:txt(v)};
+      });
+    }
+  });
+  return plan;
+}
+</script>
+
+<script>
+/* ---------- lector del archivo original: ESTADOS DE EGIS FUTURO.xlsm, hoja 100% ---------- */
+const XLSM_ET=[
+ ["Inicio de obras","INICIO OBRAS","INICIO OBRAS"],
+ ["Recepción municipal (DOM)","FECHA R. DOM","FECHA R. DOM"],
+ ["Acta de género","GENERO","FECHA GENERO"],
+ ["Estado de pago 50%","50%","FECHA 50%"],
+ ["Estado de pago antes 75%","ANTES 75%","FECHA ANTES 75%"],
+ ["Estado de pago después 75%","DESPUÉS 75%","FECHA DESPUES 75%"],
+ ["1ª postventa","1° Post Venta","Fecha 1° Post"],
+ ["2ª postventa","2° Post Venta","Fecha 2° Post"],
+ ["Uso, cuidado y mantención","Uso, Cuidado","Fecha UCM"],
+ ["3ª postventa","3° Post Venta","Fecha 3°Post"],
+ ["4ª postventa","4°Post Venta","Fecha 4°Post"],
+ ["Plan de acompañamiento social AT5","Plan Acopañamiento T.S AT5",null],
+ ["Informe final","Informe Final","Fecha IF"]];
+const XLSM_BL=[
+ ["Resolución de selección","RES. SELECCIÓN"],
+ ["Resolución que aprueba","RES. APRUEBA"],
+ ["Certificado de recepción municipal","N°RECEP.DOM"],
+ ["Contrato con contratista","CONTRATISTA"],
+ ["Certificado AT7","AT7"],
+ ["Boletas del contratista","BOLETAS"]];
+
+function planDesdeEstados(wbk){
+  const hoja = wbk.SheetNames.includes("100%") ? "100%" : wbk.SheetNames.find(n=>/^100%/.test(n));
+  const f=filas(wbk,hoja);
+  if(f.length<2) throw new Error("La hoja «100%» no tiene filas de datos.");
+  const H=f[0].map(txt);
+  const ix=n=>H.indexOf(n);
+  const g=(r,n)=>{ const i=ix(n); return i<0? null : r[i]; };
+  if(ix("NOMBRE")<0) throw new Error("La hoja «100%» no trae la columna NOMBRE.");
+
+  let pg=S.progs.find(x=>(x.codigo||"")===P_CIERRE) || S.progs.find(x=>/cierre/i.test(x.nombre||""));
+  if(!pg){
+    pg={id:uid("pg"),codigo:P_CIERRE,nombre:"EGIS Futuro · Cierre de obra y postventa",plazo:"",
+        etapas:XLSM_ET.map(e=>({id:uid("e"),nombre:e[0]})),
+        bloques:XLSM_BL.map(b=>({id:uid("b"),nombre:b[0],descripcion:""}))};
+  } else {
+    pg=JSON.parse(JSON.stringify(pg));
+    XLSM_ET.forEach(e=>{ if(!(pg.etapas||[]).some(x=>x.nombre===e[0])) (pg.etapas=pg.etapas||[]).push({id:uid("e"),nombre:e[0]}); });
+    XLSM_BL.forEach(b=>{ if(!(pg.bloques||[]).some(x=>x.nombre===b[0])) (pg.bloques=pg.bloques||[]).push({id:uid("b"),nombre:b[0],descripcion:""}); });
+  }
+  const plan={programas:{},proyectos:{},avisos:[],origen:"ESTADOS DE EGIS FUTURO · hoja "+hoja};
+  plan.programas[P_CIERRE]=pg;
+  const idEt=n=>(pg.etapas.find(e=>e.nombre===n)||{}).id;
+  const idBl=n=>(pg.bloques.find(b=>b.nombre===n)||{}).id;
+
+  let n=0; const usados=new Set();
+  for(let i=1;i<f.length;i++){
+    const r=f[i]; if(!r) continue;
+    const nombre=txt(g(r,"NOMBRE")).replace(/\s+/g," "); if(!nombre) continue;
+    n++;
+    const codigo=txt(g(r,"CODIGO"));
+    let ex = (codigo && S.proys.find(x=>x.programaId===pg.id && txt(x.codigo)===codigo && !usados.has(x.id)))
+            || S.proys.find(x=>x.programaId===pg.id && (x.postulante||"").toLowerCase()===nombre.toLowerCase() && !usados.has(x.id));
+    if(ex) usados.add(ex.id);
+    const p = ex? JSON.parse(JSON.stringify(ex)) : {id:uid("p"),programaId:pg.id,etapas:{},bloques:{},obs:"",rol:"",responsable:""};
+    p.programaId=pg.id; p.numero = ex? ex.numero : n; p.postulante=nombre; p.codigo=codigo||p.codigo||"";
+    p.comuna=normComuna(g(r,"COMUNA"))||p.comuna||"";
+    p.localidad=(txt(g(r,"LOCALIDAD"))||txt(g(r,"LOCALLIDAD"))||p.localidad||"").toLowerCase().replace(/(^|\s)\S/g,c=>c.toUpperCase());
+    p.rut=txt(g(r,"RUT"))||p.rut||"";
+    p.contratista=txt(g(r,"CONTRATISTA"))||txt(g(r,"E_CONSTRUCTORA"))||p.contratista||"";
+    p.estado=normEstadoProy(g(r,"ESTADO PROYECTO"))||p.estado||"";
+    p.motivo=txt(g(r,"Motivo"))||p.motivo||"";
+    p.etapas=p.etapas||{}; p.bloques=p.bloques||{};
+    XLSM_ET.forEach(([nom,cEst,cFec])=>{
+      const id=idEt(nom); if(!id) return;
+      const c=celdaEtapa(g(r,cEst), cFec? g(r,cFec) : undefined);
+      p.etapas[id]={estado:c.estado,fecha:c.fecha,responsable:(p.etapas[id]||{}).responsable||"",respaldo:c.nota};
+    });
+    XLSM_BL.forEach(([nom,col])=>{
+      const id=idBl(nom); if(!id) return;
+      const v=txt(g(r,col));
+      const on=!!v && !/^N\s*\/\s*A$/i.test(v) && !/FALTA/i.test(v) && !/NO PAGO/i.test(v);
+      p.bloques[id]={cargado:on,fecha:(p.bloques[id]||{}).fecha||"",obs:v};
+    });
+    p._nuevo=!ex;
+    plan.proyectos[P_CIERRE+"#"+p.numero+"#"+i]=p;
+  }
+  return plan;
+}
+
+/* ---------- diff y aplicación ---------- */
+function resumirPlan(plan){
+  const ps=Object.values(plan.proyectos);
+  const nuevos=ps.filter(p=>p._nuevo).length;
+  let cambios=0, campos=0;
+  ps.forEach(p=>{
+    const ex=S.proys.find(x=>x.id===p.id);
+    if(!ex) return;
+    let dif=false;
+    ["postulante","comuna","localidad","codigo","rut","rol","contratista","responsable","estado","motivo","obs"].forEach(k=>{
+      if((ex[k]||"")!==(p[k]||"")){ dif=true; campos++; }
+    });
+    Object.keys(p.etapas||{}).forEach(k=>{
+      const a=(ex.etapas||{})[k]||{}, b=p.etapas[k]||{};
+      if(a.estado!==b.estado || (a.fecha||"")!==(b.fecha||"")){ dif=true; campos++; }
+    });
+    Object.keys(p.bloques||{}).forEach(k=>{
+      const a=(ex.bloques||{})[k]||{}, b=p.bloques[k]||{};
+      if(!!a.cargado!==!!b.cargado){ dif=true; campos++; }
+    });
+    if(p.cc){ const A=JSON.stringify(ex.cc||{}), B=JSON.stringify(p.cc);
+      if(A!==B){ dif=true; campos++; } }
+    if(dif) cambios++;
+  });
+  const progs=Object.values(plan.programas).length;
+  return {nuevos,cambios,campos,progs,total:ps.length};
+}
+function sellarFuentes(plan,nombreArchivo){
+  const base=(nombreArchivo||"").toLowerCase();
+  Object.values(plan.programas).forEach(pg=>{
+    const fs=pg.fuentes||[];
+    let tocada=false;
+    fs.forEach(f=>{ const a=(f.archivo||"").toLowerCase();
+      if(a && base && (base.includes(a) || a.includes(base.replace(/\.[a-z]+$/,"")))){
+        f.ultimaCarga=new Date().toISOString(); if(f.uso==="pendiente") f.uso="activa"; tocada=true; } });
+    if(!tocada && nombreArchivo){
+      fs.push({parte:"Importado desde la página",archivo:nombreArchivo,hoja:"",ruta:"",
+        nota:"Archivo cargado manualmente. Edita esta fila si quieres dejar anotada su ruta.",
+        uso:"activa",ultimaCarga:new Date().toISOString()});
+    }
+    pg.fuentes=fs;
+  });
+}
+async function aplicarPlan(plan,onProg){
+  const progs=Object.values(plan.programas);
+  const ps=Object.values(plan.proyectos);
+  const total=progs.length+ps.length; let hecho=0;
+  const limpio=o=>{ const c=JSON.parse(JSON.stringify(o)); delete c._nuevo; delete c.id; return c; };
+  for(const pg of progs){
+    if(S.db) await S.db.doc("programas/"+pg.id).set(limpio(pg));
+    const i=S.progs.findIndex(x=>x.id===pg.id);
+    if(i>=0) S.progs[i]=pg; else S.progs.push(pg);
+    onProg(++hecho,total);
+  }
+  const lote=4;
+  for(let i=0;i<ps.length;i+=lote){
+    const grupo=ps.slice(i,i+lote);
+    await Promise.all(grupo.map(async p=>{
+      p.updatedAt=new Date().toISOString(); p.updatedBy=(S.autor||"importación")+" · planilla";
+      if(S.db) await S.db.doc("proyectos/"+p.id).set(limpio(p));
+      const j=S.proys.findIndex(x=>x.id===p.id);
+      if(j>=0) S.proys[j]=p; else S.proys.push(p);
+      onProg(++hecho,total);
+    }));
+    await new Promise(r=>setTimeout(r,120));
+  }
+}
+</script>
+
+<script>
+/* ---------- lector de los dos archivos de cartera crítica ---------- */
+const CC_PART=[["CSR","CSR base"],["Mejoramiento Vivienda","Mejoramiento de vivienda"],["Servicios Básicos","Servicios básicos"],
+ ["Térmico","Acondicionamiento térmico"],["Eficiencia Energética","Eficiencia energética"],["Cocina","Cocina"],["Baño","Baño"],
+ ["Nuevo Dormitorio","Nuevo dormitorio"],["Recinto Complementario","Recinto complementario"],["Entorno Inmediato","Entorno inmediato"],
+ ["Entorno Comunitario","Entorno comunitario"],["Mejoramiento Terreno","Mejoramiento de terreno"],["Solucion Sanitaria","Solución sanitaria"],
+ ["Requerimiento Arquitectónico Local","Requerimiento arquitectónico"],["Discapacidad","Discapacidad"],
+ ["Construccion Existente","Construcción existente"],["Ahorro Aporte MINVU","Ahorro / aporte MINVU"]];
+const numOf=v=>{ if(v==null||v==="") return null; const f=parseFloat(String(v).replace(",",".")); return isNaN(f)?null:(f%1?Math.round(f*100)/100:f); };
+const claveNom=s=>nrmTxt(s).replace(/\s+/g," ").trim();
+function nrmTxt(s){ return String(s==null?"":s).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Z0-9 ]/g," ").replace(/\s+/g," ").trim(); }
+function encabezado(f,clave){
+  for(let i=0;i<Math.min(f.length,10);i++){ const v=(f[i]||[]).map(nrmTxt); if(v.includes(clave)) return i; }
+  return -1;
+}
+function planDesdeCarteraCritica(wbk){
+  const pg0 = S.progs.find(x=>/cartera cr/i.test(x.nombre||"")) || S.progs.find(x=>(x.codigo||"")==="CC-TEC");
+  if(!pg0) throw new Error("No encuentro el programa de cartera crítica en el sistema. Créalo antes de importar.");
+  const pg=JSON.parse(JSON.stringify(pg0));
+  const plan={programas:{},proyectos:{},avisos:[],origen:""};
+  plan.programas[pg.codigo||"CC-TEC"]=pg;
+  const mios=S.proys.filter(p=>p.programaId===pg.id);
+  const buscar=nom=>{ const k=claveNom(nom); return mios.find(p=>claveNom(p.postulante)===k); };
+  const tocar=p=>{ const k=p.id; if(!plan.proyectos[k]) plan.proyectos[k]=JSON.parse(JSON.stringify(p)); return plan.proyectos[k]; };
+  const hoy=new Date();
+  let leidos=0, fuentes=[];
+
+  // --- A. Nomina_CC (PHR_1_..xlsm): expediente, montos, RSH, déficit, edad
+  const hn=wbk.SheetNames.find(n=>/^nomina[_\s-]*cc$/i.test(n.trim()));
+  if(hn){
+    fuentes.push("Nomina_CC");
+    const f=filas(wbk,hn); const hi=encabezado(f,"NOMBRE");
+    if(hi>=0){
+      const H=f[hi].map(txt); const ix=n=>H.indexOf(n);
+      const g=(r,n)=>{ const i=ix(n); return i<0?null:r[i]; };
+      for(let i=hi+1;i<f.length;i++){ const r=f[i]; if(!r) continue;
+        const nom=txt(g(r,"NOMBRE")).replace(/\s+/g," "); if(!nom||nrmTxt(nom).length<7) continue;
+        const p=buscar(nom); if(!p){ plan.avisos.push("Sin ficha en el sistema: "+nom); continue; }
+        const d=tocar(p); const c=Object.assign({},d.cc||{});
+        const rut=txt(g(r,"RUT POSTULANTE")), dv=txt(g(r,"DV"));
+        c.expediente=txt(g(r,"N° EXP."))||c.expediente||"";
+        c.anio=txt(g(r,"AÑO"))||c.anio||""; c.egr=txt(g(r,"EGR EVALUANDO"))||c.egr||"";
+        c.provincia=normComuna(g(r,"PROVINCIA"))||c.provincia||"";
+        c.comuna=normComuna(g(r,"COMUNA"))||c.comuna||"";
+        c.localidad=txt(g(r,"LOCALIDAD"))||c.localidad||"";
+        c.edad=numOf(g(r,"EDAD"))??c.edad??null; c.igf=numOf(g(r,"N° IGF"))??c.igf??null;
+        c.rsh=txt(g(r,"TRAMO RSH"))||c.rsh||"";
+        c.deficit=(txt(g(r,"DÉFICIT HABITABILIDAD"))||c.deficit||"").replace(/^./,m=>m.toUpperCase()).toLowerCase().replace(/^./,m=>m.toUpperCase());
+        c.factor=numOf(g(r,"FACTOR MULTIPLICADOR"))??c.factor??null;
+        c.subsidio=numOf(g(r,"TOTAL SUBSIDIO"))??c.subsidio??null;
+        c.ahorro=numOf(g(r,"AHORRO"))??c.ahorro??null;
+        c.partidas=CC_PART.map(([col,lab])=>({nombre:lab,uf:numOf(g(r,col))||0})).filter(x=>x.uf);
+        if(rut) d.rut=rut+"-"+dv;
+        if(c.comuna) d.comuna=c.comuna;
+        if(c.localidad) d.localidad=c.localidad;
+        d.cc=c; d.codigo=c.expediente||d.codigo; leidos++;
+      }
+    }
+  }
+  // --- B. Cartera_Critica.xlsx: situación, predio, contacto, antigüedad
+  const hojasCC=wbk.SheetNames.filter(n=>/cartera\s*cr[ií]tica/i.test(n));
+  if(hojasCC.length){
+    fuentes.push("Cartera_Critica");
+    const regional=[];
+    hojasCC.forEach(hoja=>{
+      const esActual=/actual/i.test(hoja), esMaule=/maule/i.test(hoja);
+      const f=filas(wbk,hoja); const hi=encabezado(f,"NOMBRE"); if(hi<0) return;
+      const H=f[hi].map(txt);
+      const col=(...ns)=>{ for(const n of ns){ const i=H.indexOf(n); if(i>=0) return i; } return -1; };
+      const iN=col("NOMBRE"),iObs=col("OBSERVACIONES"),iObs2=col("FECHA RESOLUCION"),iFp=col("Fecha Post."),
+        iDir=col("DIRECCION"),iFono=col("TELEFONO"),iRol=col("ROL AVALUO"),iMts=col("MTS"),
+        iFoja=col("FOJA"),iNum=col("NUMERO"),iAno=col("AÑO"),iGf=col("GRUPO FAMILIAR"),
+        iDef=col("DÉFICIT"),iRsh=col("RSH"),iEdad=col("EDAD"),iDisc=col("DISCAPACIDAD"),
+        iEgr=col("ENTIDAD GESTION RURAL"),iSub=col("TOTAL SUBSIDIO"),iCom=col("COMUNA","Comuna"),
+        iLoc=col("LOCALIDAD"),iCal=col("CALICATA","Calicata"),iCod=col("codigo");
+      for(let i=hi+1;i<f.length;i++){ const r=f[i]; if(!r) continue;
+        const nom=txt(r[iN]); if(!nom||nrmTxt(nom).length<7) continue;
+        let obs=iObs>=0?txt(r[iObs]):"";
+        if(!obs && iObs2>=0){ const v=txt(r[iObs2]); if(v && !/^[\d.,\s]+$/.test(v)) obs=v; }
+        const p=buscar(nom);
+        if(!p){
+          if(esMaule && esActual) regional.push({nombre:nom.replace(/\s+/g," "),egr:iEgr>=0?txt(r[iEgr]):"",
+            comuna:iCom>=0?normComuna(r[iCom]):"",localidad:iLoc>=0?txt(r[iLoc]):"",
+            codigo:iCod>=0?txt(r[iCod]):"",subsidio:iSub>=0?numOf(r[iSub]):null,
+            deficit:iDef>=0?(txt(r[iDef])||"").replace(/^(.)(.*)$/,(m,a,b)=>a.toUpperCase()+b.toLowerCase()):"",
+            edad:iEdad>=0?numOf(r[iEdad]):null});
+          continue;
+        }
+        const d=tocar(p); const c=Object.assign({},d.cc||{});
+        const set=(k,v)=>{ if(v!=null && v!=="" ) c[k]=v; };
+        if(obs) c.situacion=obs;
+        if(iFp>=0) set("fechaPost", isoD(r[iFp]));
+        if(iDir>=0) set("direccion", txt(r[iDir]));
+        if(iFono>=0) set("fono", txt(r[iFono]));
+        if(iRol>=0) set("rol", txt(r[iRol]));
+        if(iMts>=0) set("superficie", numOf(r[iMts]));
+        if(iGf>=0) set("grupoFamiliar", numOf(r[iGf]));
+        if(iEdad>=0 && c.edad==null) set("edad", numOf(r[iEdad]));
+        if(iRsh>=0 && !c.rsh) set("rsh", txt(r[iRsh]));
+        if(iDef>=0 && !c.deficit) set("deficit", (txt(r[iDef])||"").replace(/^(.)(.*)$/,(m,a,b)=>a.toUpperCase()+b.toLowerCase()));
+        if(iDisc>=0) set("discapacidad", txt(r[iDisc]).toUpperCase());
+        if(iCal>=0) set("calicata", txt(r[iCal]));
+        if(iFoja>=0 && iAno>=0 && txt(r[iFoja]) && txt(r[iAno]))
+          c.inscripcion="Fojas "+txt(r[iFoja])+" N° "+(iNum>=0?txt(r[iNum]):"")+" año "+txt(r[iAno]);
+        d.cc=c; leidos++;
+      }
+    });
+    if(regional.length) pg.ccRegional=regional;
+  }
+  // antigüedad recalculada
+  Object.values(plan.proyectos).forEach(d=>{
+    const c=d.cc; if(!c) return;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(c.fechaPost||"")){
+      c.esperaAnios=Math.round((hoy-new Date(c.fechaPost+"T12:00:00"))/31557600000*10)/10;
+    } else if(/^\d{4}$/.test(String(c.anio||""))){
+      c.esperaAnios=Math.round((hoy.getFullYear()-Number(c.anio)+(hoy.getMonth())/12)*10)/10;
+    }
+  });
+  pg.ccFuentes=fuentes.join(" + ");
+  plan.origen="Cartera crítica · "+fuentes.join(" + ");
+  if(!leidos) throw new Error("El archivo no trae filas reconocibles de cartera crítica.");
+  return plan;
+}
+</script>
+
+<script>
+/* ---------- interfaz de importación ---------- */
+let PLAN=null;
+function abrirImportador(){
+  const m=$("#modal");
+  m.innerHTML=`
+   <header><div style="flex:1"><div class="eyebrow">Sincronizar desde Excel</div><h3>Importar planilla</h3></div>
+     <button class="x" onclick="cerrarModal()" aria-label="Cerrar">×</button></header>
+   <div class="mbody">
+     <div class="drop" id="drop">Arrastra aquí el archivo, o haz clic para buscarlo<br>
+       <span style="font-size:11.5px">Acepta la <b>planilla vinculada</b>, <b>ESTADOS DE EGIS FUTURO.xlsm</b>, <b>PHR_1_CSR_Cartera_Critica_2026.xlsm</b> y <b>Cartera_Critica.xlsx</b></span></div>
+     <div class="log" id="implog" style="display:none"></div>
+     <div class="prog" id="impprog" style="display:none"><i></i></div>
+   </div>
+   <footer><button class="btn" onclick="cerrarModal()">Cancelar</button>
+     <button class="btn pri" id="btnAplicar" style="display:none" onclick="confirmarImport()">Aplicar cambios</button></footer>`;
+  m.classList.add("on"); m.setAttribute("aria-hidden","false"); $("#scrim2").classList.add("on");
+  const drop=$("#drop"), inp=$("#fileIn");
+  drop.onclick=()=>inp.click();
+  drop.ondragover=e=>{e.preventDefault();drop.classList.add("hot");};
+  drop.ondragleave=()=>drop.classList.remove("hot");
+  drop.ondrop=e=>{e.preventDefault();drop.classList.remove("hot"); if(e.dataTransfer.files[0]) leerArchivo(e.dataTransfer.files[0]);};
+  inp.onchange=()=>{ if(inp.files[0]) leerArchivo(inp.files[0]); inp.value=""; };
+}
+function cerrarModal(){ const m=$("#modal"); m.classList.remove("on"); m.setAttribute("aria-hidden","true"); $("#scrim2").classList.remove("on"); PLAN=null; }
+function logImp(html){ const l=$("#implog"); if(!l) return; l.style.display="block"; l.innerHTML=html; }
+
+async function leerArchivo(file){
+  if(typeof XLSX==="undefined"){ logImp('<b style="color:var(--crit)">No se pudo cargar el lector de Excel.</b> Revisa tu conexión y vuelve a intentarlo.'); return; }
+  logImp("Leyendo <b>"+esc(file.name)+"</b>…");
+  try{
+    const buf=await file.arrayBuffer();
+    const wbk=XLSX.read(buf,{type:"array",cellDates:true});
+    let plan;
+    if(wbk.SheetNames.some(n=>/^4\.\s*N[oó]mina/i.test(n))) plan=planDesdePlanilla(wbk);
+    else if(wbk.SheetNames.some(n=>/^100%$/.test(n.trim()))) plan=planDesdeEstados(wbk);
+    else if(wbk.SheetNames.some(n=>/^nomina[_\s-]*cc$/i.test(n.trim())) || wbk.SheetNames.some(n=>/cartera\s*cr[ií]tica/i.test(n)))
+      plan=planDesdeCarteraCritica(wbk);
+    else throw new Error("No reconozco este archivo. Debe ser la planilla vinculada («4. Nómina»), ESTADOS DE EGIS FUTURO.xlsm («100%»), PHR_1_CSR_Cartera_Critica_2026.xlsm («Nomina_CC») o Cartera_Critica.xlsx.");
+    PLAN=plan; PLAN.archivo=file.name;
+    const d=resumirPlan(plan);
+    const pgs=Object.values(plan.programas).map(p=>esc(p.nombre)+" ("+(p.etapas||[]).length+" etapas, "+(p.bloques||[]).length+" bloques)").join("<br>");
+    logImp(`<b>${esc(file.name)}</b><br><span style="color:var(--ink-3)">Formato detectado: ${esc(plan.origen)}</span>
+      <div class="diff" style="margin:10px 0">
+        <div><div class="k">Proyectos leídos</div><div class="v">${d.total}</div></div>
+        <div><div class="k">Nuevos</div><div class="v" style="color:${d.nuevos?"var(--accent)":"var(--ink-3)"}">${d.nuevos}</div></div>
+        <div><div class="k">Con cambios</div><div class="v" style="color:${d.cambios?"var(--warn)":"var(--ink-3)"}">${d.cambios}</div></div>
+        <div><div class="k">Celdas modificadas</div><div class="v">${d.campos}</div></div>
+      </div>
+      <b>Programas:</b><br>${pgs}
+      ${d.nuevos+d.cambios===0?'<br><br><b style="color:var(--good)">Todo coincide con lo que ya está cargado.</b> No hay nada que aplicar.':""}`);
+    $("#btnAplicar").style.display = (d.nuevos+d.cambios)?"inline-flex":"none";
+  }catch(e){
+    PLAN=null; $("#btnAplicar").style.display="none";
+    logImp('<b style="color:var(--crit)">No se pudo leer el archivo.</b><br>'+esc(e.message||String(e)));
+  }
+}
+async function confirmarImport(){
+  if(!PLAN) return;
+  const btn=$("#btnAplicar"); btn.disabled=true; btn.textContent="Aplicando…";
+  const bar=$("#impprog"); bar.style.display="block";
+  try{
+    sellarFuentes(PLAN, PLAN.archivo||"");
+    await aplicarPlan(PLAN,(h,t)=>{ bar.firstElementChild.style.width=Math.round(h/t*100)+"%"; });
+    logImp('<b style="color:var(--good)">Listo.</b> Los datos quedaron actualizados para todo el equipo.');
+    btn.style.display="none";
+    ordenarProgs(); render();
+    setTimeout(cerrarModal,1400);
+  }catch(e){
+    logImp('<b style="color:var(--crit)">Se interrumpió la carga.</b><br>'+esc(e.message||e.code||String(e))+'<br>Los proyectos ya escritos quedaron guardados; vuelve a importar el archivo para completar el resto.');
+    btn.disabled=false; btn.textContent="Reintentar";
+  }
+}
+
+/* ---------- exportar la planilla vinculada ---------- */
+async function exportarPlanilla(){
+  if(typeof XLSX==="undefined"){ aviso("No se pudo cargar el generador de Excel."); return; }
+  if(!S.dl){ aviso("La descarga de archivos no está disponible en esta vista."); return; }
+  const wbk=XLSX.utils.book_new();
+  const add=(nombre,aoa,anchos)=>{ const ws=XLSX.utils.aoa_to_sheet(aoa);
+    if(anchos) ws["!cols"]=anchos.map(w=>({wch:w}));
+    ws["!freeze"]={xSplit:0,ySplit:1};
+    XLSX.utils.book_append_sheet(wbk,ws,nombre.slice(0,31)); };
+
+  add("0. Léeme",[["PLANILLA VINCULADA · Control EGIS Maule"],
+    ["Exportada el "+new Date().toLocaleString("es-CL")],[],
+    ["Completa las celdas vacías y vuelve a importar este archivo desde la página."],
+    ["En las hojas de avance: escribe la fecha de cierre (AAAA-MM-DD), o Parcial, o deja vacío."],
+    ["En las hojas de documentos: escribe Sí cuando el respaldo esté cargado."]],[110]);
+
+  add("1. Programas",[["Código","Nombre del programa","Plazo comprometido","Modalidad DS10","Tipología en uso",
+      "¿Tipología única?","Código / versión planimetría","¿Requiere nueva tipología?","Justificación",
+      "Responsable de coordinación","Contacto","Link carpeta de respaldos"]].concat(
+    S.progs.map(p=>[p.codigo||"",p.nombre||"",p.plazo||"",p.modalidad||"",p.tipologia||"",
+      p.tipologiaUnica==="si"?"Sí":(p.tipologiaUnica==="no"?"No":""),p.tipologiaCodigo||"",
+      p.requiereNueva==="si"?"Sí":(p.requiereNueva==="no"?"No":""),p.justificacion||"",
+      p.coordinador||"",p.contacto||"",p.drive||""])),[14,40,20,24,22,15,22,17,30,24,26,34]);
+
+  const et=[["Programa","Orden","Etapa","Descripción o criterio de cierre","Responsable por defecto"]];
+  const bl=[["Programa","Bloque documental","Contenido esperado"]];
+  S.progs.forEach(pg=>{ (pg.etapas||[]).forEach((e,i)=>et.push([pg.codigo||"",i+1,e.nombre,e.descripcion||"",e.responsable||""]));
+                        (pg.bloques||[]).forEach(b=>bl.push([pg.codigo||"",b.nombre,b.descripcion||""])); });
+  add("2. Etapas",et,[14,9,44,58,26]); add("3. Bloques",bl,[14,34,72]);
+
+  const nom=[["Programa","N°","Código","Comuna","Localidad","Postulante","RUT","Rol SII","Contratista",
+              "Responsable a cargo","Estado declarado","Motivo","Observaciones","Grupo"]];
+  S.progs.forEach(pg=> S.proys.filter(p=>p.programaId===pg.id).sort((a,b)=>(a.numero||0)-(b.numero||0)).forEach(p=>
+    nom.push([pg.codigo||"",p.numero||"",p.codigo||"",p.comuna||"",p.localidad||"",p.postulante||"",p.rut||"",
+              p.rol||"",p.contratista||"",p.responsable||"",p.estado||"",p.motivo||"",p.obs||"",p.grupo||""])));
+  add("4. Nómina",nom,[13,7,11,16,18,34,14,13,30,22,26,18,30,18]);
+
+  let n=5;
+  S.progs.forEach(pg=>{
+    const ps=S.proys.filter(p=>p.programaId===pg.id).sort((a,b)=>(a.numero||0)-(b.numero||0));
+    const av=[["N°","Postulante (referencia)"].concat((pg.etapas||[]).map(e=>e.nombre))];
+    ps.forEach(p=> av.push([p.numero||"",p.postulante||""].concat((pg.etapas||[]).map(e=>{
+      const v=(p.etapas||{})[e.id]||{};
+      return v.estado==="completa" ? (v.fecha||"Completa") : (v.estado==="parcial"?"Parcial":(v.estado==="na"?"No corresponde":""));
+    }))));
+    add(n+". Avance "+(pg.codigo||""),av,[8,34].concat((pg.etapas||[]).map(()=>15))); n++;
+    const dc=[["N°","Postulante (referencia)"].concat((pg.bloques||[]).map(b=>b.nombre))];
+    ps.forEach(p=> dc.push([p.numero||"",p.postulante||""].concat((pg.bloques||[]).map(b=>
+      ((p.bloques||{})[b.id]||{}).cargado?"Sí":""))));
+    add(n+". Docs "+(pg.codigo||""),dc,[8,34].concat((pg.bloques||[]).map(()=>15))); n++;
+  });
+
+  const ant=[["Programa","Bloque","Contenido a cargar","¿Cargado? (Sí/No)","Observación"]];
+  const eds=[["Programa","Etapa","Estado (Completa/Parcial/vacío)","Fecha","Responsable","Respaldo / ubicación"]];
+  S.progs.forEach(pg=>{ const ev=evalDe(pg);
+    ev.bloques.forEach(b=> ant.push([pg.codigo||"",b.nombre,b.contenido,b.cargado?"Sí":"",b.obs||""]));
+    ev.etapas.forEach(e=> eds.push([pg.codigo||"",e.nombre, e.estado==="completa"?"Completa":(e.estado==="parcial"?"Parcial":""), e.fecha||"", e.responsable||"", e.respaldo||""]));
+  });
+  add(n+". Antecedentes",ant,[13,18,66,17,30]); n++;
+  add(n+". Etapas desarrolladas",eds,[13,34,22,14,20,30]);
+
+  const out=XLSX.write(wbk,{bookType:"xlsx",type:"array"});
+  try{
+    await S.dl.save({filename:"Planilla_Control_EGIS_"+todayISO()+".xlsx",data:out});
+    const el=$("#syncState"); el.textContent="Planilla exportada"; setTimeout(estadoSync,3500);
+  }catch(e){ if(e&&e.code==="declined") return; aviso("No se pudo guardar la planilla."); }
+}
+</script>
+
+<script>
+/* ---------------- NAVEGACIÓN / ARRANQUE ---------------- */
+function ir(v){ S.view=v; syncNav(); render(); window.scrollTo({top:0}); }
+function syncNav(){ document.querySelectorAll(".navbtn").forEach(b=>b.classList.toggle("on", b.dataset.v===S.view)); }
+document.querySelectorAll(".navbtn").forEach(b=> b.addEventListener("click",()=>ir(b.dataset.v)));
+$("#progSel").addEventListener("change",e=>{ S.progId=e.target.value; render(); });
+$("#scrim").addEventListener("click",cerrar);
+$("#scrim2").addEventListener("click",cerrarModal);
+$("#printBtn").addEventListener("click",()=>window.print());
+
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ cerrarModal(); cerrar(); } });
+$("#themeBtn").addEventListener("click",()=>{
+  const cur=document.documentElement.getAttribute("data-theme");
+  const isDark = cur ? cur==="dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  const next = isDark? "light":"dark";
+  document.documentElement.setAttribute("data-theme",next);
+  try{ localStorage.setItem("egis.tema",next); }catch(err){}
+});
+try{ const t=localStorage.getItem("egis.tema"); if(t) document.documentElement.setAttribute("data-theme",t);
+     S.autor=localStorage.getItem("egis.autor")||""; }catch(e){}
+
+function ordenarProgs(){ S.progs.sort((a,b)=> String(a.nombre).localeCompare(String(b.nombre),"es")); }
+
+/* el arranque vive en el bloque de carga de datos.json */
+</script>
+<script>
+/* ============================================================
+   Control EGIS · versión en vivo
+   Lee datos.json cada vez que se abre la página (y cada 2 min).
+   El archivo lo genera y sube escanear.py desde el computador de la EGIS.
+   ============================================================ */
+const DATOS = {programas:[], proyectos:[], corte:""};
+const FUENTE = "datos.json";
+
+function bannerError(msg){
+  const v = document.getElementById("view");
+  if(v) v.innerHTML = '<div class="panel"><div class="empty">'
+    + '<p style="font-size:15px;color:var(--ink);font-weight:600;margin:0 0 6px">No se pudieron cargar los datos</p>'
+    + '<p style="margin:0 0 4px">' + msg + '</p>'
+    + '<p style="margin:0;font-size:12px;color:var(--ink-3)">Se lee el archivo <span class="mono">' + FUENTE + '</span> publicado junto a esta página.</p>'
+    + '</div></div>';
+}
+
+async function traerDatos(){
+  const r = await fetch(FUENTE + "?t=" + Date.now(), {cache:"no-store"});
+  if(!r.ok) throw new Error("El servidor respondió " + r.status + ".");
+  const d = await r.json();
+  if(!d || !Array.isArray(d.programas) || !Array.isArray(d.proyectos)) throw new Error("El archivo llegó con un formato inesperado.");
+  return d;
+}
+
+function aplicar(d){
+  const antes = S.progId;
+  DATOS.programas = d.programas; DATOS.proyectos = d.proyectos; DATOS.corte = d.corte || "";
+  S.progs = d.programas; S.proys = d.proyectos;
+  S.progId = (antes && d.programas.some(p=>p.id===antes)) ? antes : (d.programas[0] && d.programas[0].id);
+  S.ready = true;
+  const e = document.getElementById("syncState");
+  if(e) e.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px">'
+    + '<i style="width:7px;height:7px;border-radius:50%;background:var(--good);display:block"></i>'
+    + 'En vivo · ' + esc(DATOS.corte) + '</span>';
+  render();
+}
+
+(function init(){
+  S.db = null; S.dl = null;
+  traerDatos().then(aplicar).catch(e=>{
+    S.ready = true;
+    const s = document.getElementById("syncState");
+    if(s) s.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px">'
+      + '<i style="width:7px;height:7px;border-radius:50%;background:var(--crit);display:block"></i>Sin conexión al archivo</span>';
+    bannerError(esc(e.message));
+  });
+  // refresco silencioso mientras la pestaña queda abierta
+  setInterval(()=>{ if(document.visibilityState==="visible") traerDatos().then(aplicar).catch(()=>{}); }, 120000);
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.visibilityState==="visible") traerDatos().then(aplicar).catch(()=>{});
+  });
+})();
+</script>
+</body>
+</html>
