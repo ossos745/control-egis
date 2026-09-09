@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#1d3a5f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231d3a5f'/%3E%3Ctext x='16' y='22' font-family='system-ui' font-size='15' font-weight='700' fill='white' text-anchor='middle'%3EEG%3C/text%3E%3C/svg%3E">
 <style>:root{color-scheme:light dark}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 
-
 <title>Control EGIS Maule · en vivo</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231d3a5f'/%3E%3Ctext x='16' y='22' font-family='system-ui' font-size='15' font-weight='700' fill='white' text-anchor='middle'%3EEG%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -204,6 +205,15 @@ svg text{font-family:"Source Sans 3",sans-serif}
 .seg button.on.na{background:var(--crit);color:#fff}
 .doc.na{background:color-mix(in srgb,var(--crit) 9%,transparent);border-color:var(--crit)}
 .doc.na .t{color:var(--crit)}
+.toast{position:fixed;left:50%;top:14px;transform:translateX(-50%) translateY(-14px);z-index:200;
+  background:var(--surface);border:1px solid var(--line-2);border-radius:9px;padding:10px 14px;
+  box-shadow:0 8px 26px rgba(0,0,0,.16);font-size:13px;font-weight:500;color:var(--ink);
+  display:flex;align-items:center;gap:9px;max-width:min(92vw,460px);opacity:0;pointer-events:none;
+  transition:opacity .18s ease,transform .18s ease}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast i{width:9px;height:9px;border-radius:50%;flex:none;background:var(--ink-3)}
+.toast.ok i{background:var(--good)} .toast.wa i{background:var(--warn)} .toast.cr i{background:var(--crit)}
+.toast .sub{display:block;font-weight:400;color:var(--ink-3);font-size:11.5px;margin-top:2px}
 .nabox{display:block;width:13px;height:13px;border-radius:3px;background:color-mix(in srgb,var(--crit) 16%,transparent);border:1px solid var(--crit);position:relative}
 .nabox::before,.nabox::after{content:"";position:absolute;left:2px;right:2px;top:5px;height:1.6px;background:var(--crit);border-radius:1px}
 .nabox::before{transform:rotate(45deg)}
@@ -294,9 +304,21 @@ svg text{font-family:"Source Sans 3",sans-serif}
   table.cards td.tit{display:block;padding-bottom:6px;margin-bottom:4px;border-bottom:1px solid var(--line)}
   table.cards td.tit::before{display:none}
   table.cards .bar{justify-content:flex-end}
+  /* ficha del proyecto: que las cuatro opciones de estado quepan en el ancho */
+  .drawer .body{padding:12px}
+  .drawer header{padding:12px 14px}
+  .stagerowe{grid-template-columns:minmax(0,1fr);gap:7px;align-items:stretch}
+  .stagerowe .seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:100%}
+  .stagerowe .seg button{padding:7px 2px;font-size:10.5px;line-height:1.2;white-space:normal;
+                         word-break:normal;overflow-wrap:normal;hyphens:none}
+  .stagerowe .sub{gap:8px}
+  .stagerowe .sub label{min-width:0;max-width:100%}
+  .stagerowe .sub input{max-width:100%;min-width:0}
+  .docgrid{grid-template-columns:minmax(0,1fr)}
   .scroll{overflow-x:auto}
 }
 @media print{.rail,.top,.toolbar,.noprint{display:none!important}.view{padding:0;max-width:none}.panel{break-inside:avoid;box-shadow:none}body{background:#fff}}
+@keyframes giro{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -335,7 +357,7 @@ svg text{font-family:"Source Sans 3",sans-serif}
       <div class="spacer"></div>
       <span class="chip" id="plazoChip"></span>
       <span class="chip" id="frescoChip" title=""></span>
-      <button class="btn noprint" id="reloadBtn" style="display:none" title="Vuelve a leer la base de datos del sistema (lo que dejó la última sincronización). Para releer OneDrive hay que esperar la sincronización automática o pedirla.">
+      <button class="btn noprint" id="reloadBtn" title="Vuelve a leer la base de datos del sistema (lo que dejó la última sincronización). Para releer OneDrive hay que esperar la sincronización automática o pedirla.">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M13.6 6.6A5.8 5.8 0 1 0 14 9.4"/><path d="M13.9 2.6v4h-4"/></svg>Actualizar</button>
       <button class="btn noprint" id="printBtn">Imprimir</button>
     </div>
@@ -343,6 +365,7 @@ svg text{font-family:"Source Sans 3",sans-serif}
   </div>
 </div>
 
+<div class="toast" id="toast" role="status" aria-live="polite"><i></i><span id="toastTxt"></span></div>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
 <input type="file" id="fileIn" accept=".xlsx,.xlsm,.xls" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
@@ -415,7 +438,15 @@ async function _n2(){
 }
 }
 let avisoT;
+let toastT;
+function toast(msg, tipo, sub){
+  const t=$("#toast"), x=$("#toastTxt"); if(!t||!x) return;
+  x.innerHTML = esc(msg) + (sub? '<span class="sub">'+esc(sub)+'</span>' : "");
+  t.className="toast on "+(tipo||"");
+  clearTimeout(toastT); toastT=setTimeout(()=>{ t.className="toast "+(tipo||""); }, sub?6500:4000);
+}
 function aviso(msg){
+  toast(msg,"cr");
   const el=$("#syncState"); if(!el) return;
   el.textContent=msg; el.style.color="var(--crit)";
   clearTimeout(avisoT); avisoT=setTimeout(estadoSync,6000);
@@ -429,12 +460,26 @@ function estadoSync(){ return;
     : '<span style="display:inline-flex;align-items:center;gap:6px"><i style="width:7px;height:7px;border-radius:50%;background:var(--crit);display:block"></i>Sin conexión a la base de datos</span>';
 }
 /* Relectura manual: por si la actualización automática se cae o queda pegada. */
+function huellaDatos(){
+  return (S.proys||[]).map(p=>p.id+":"+(p.updatedAt||"")+":"+((p.at&&p.at.actualizado)||"")).sort().join("|");
+}
+function haceCuanto(iso){
+  if(!iso) return "";
+  const d=new Date(iso.length<=10? iso+"T12:00:00" : iso);
+  const h=(Date.now()-d.getTime())/3600000;
+  if(h<1) return "hace "+Math.max(1,Math.round(h*60))+" min";
+  if(h<24) return "hace "+Math.round(h)+" h";
+  return "hace "+Math.round(h/24)+" días";
+}
 async function recargar(manual){
   const btn=$("#reloadBtn");
   if(!S.db){ aviso("No hay conexión con la base de datos. Recarga la página (F5) para reintentar."); return; }
   if(S.recargando) return;
   S.recargando=true;
-  if(btn){ btn.disabled=true; btn.style.opacity=".6"; }
+  const antes=huellaDatos();
+  const txtBtn = btn? btn.innerHTML : "";
+  if(btn){ btn.disabled=true; btn.style.opacity=".6";
+    btn.innerHTML='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" style="animation:giro .8s linear infinite"><path d="M13.6 6.6A5.8 5.8 0 1 0 14 9.4"/></svg>Actualizando…'; }
   try{
     const [sp,sy]=await Promise.all([
       S.db.collection("programas").get(),
@@ -446,14 +491,22 @@ async function recargar(manual){
     if(!S.progId || !S.progs.some(x=>x.id===S.progId)) S.progId=(S.progs[0]||{}).id||null;
     S.ultima=new Date(); S.ready=true;
     render(); if(S.openId) pintarDrawer();
-    if(manual){ const el=$("#syncState"); el.style.color="";
-      el.innerHTML='<span style="color:var(--good);font-weight:600">Datos actualizados · '+S.proys.length+' proyectos</span>';
-      setTimeout(estadoSync,3000); }
+    if(manual){
+      const cambio = huellaDatos()!==antes;
+      const corte = corteDe(prog());
+      if(cambio) toast("Datos actualizados", "ok", S.proys.length+" proyectos releídos · hay cambios nuevos");
+      else toast("Ya estabas al día", "", corte
+            ? "Sin cambios desde la última lectura de las carpetas, "+haceCuanto(corte)+"."
+            : "Sin cambios en la base de datos.");
+      const el=$("#syncState"); if(el){ el.style.color="";
+        el.innerHTML='<span style="color:var(--good);font-weight:600">'+(cambio?"Datos actualizados":"Al día")+' · '+S.proys.length+' proyectos</span>';
+        setTimeout(estadoSync,3000); }
+    }
   }catch(e){
     aviso("No se pudieron releer los datos: "+(e.message||e.code||e));
   }finally{
     S.recargando=false;
-    if(btn){ btn.disabled=false; btn.style.opacity=""; }
+    if(btn){ btn.disabled=false; btn.style.opacity=""; btn.innerHTML=txtBtn; }
   }
 }
 </script>
@@ -2485,11 +2538,12 @@ function ordenarProgs(){ S.progs.sort((a,b)=> String(a.nombre).localeCompare(Str
 <script>
 /* ============================================================
    Control EGIS · versión en vivo
-   Lee datos.json cada vez que se abre la página (y cada 2 min).
+   Lee datos.json al abrir, al volver a la pestaña y cada 2 minutos.
    El archivo lo genera y sube escanear.py desde el computador de la EGIS.
    ============================================================ */
 const DATOS = {programas:[], proyectos:[], corte:""};
 const FUENTE = "datos.json";
+let cargando=false;
 
 function bannerError(msg){
   const v = document.getElementById("view");
@@ -2499,7 +2553,6 @@ function bannerError(msg){
     + '<p style="margin:0;font-size:12px;color:var(--ink-3)">Se lee el archivo <span class="mono">' + FUENTE + '</span> publicado junto a esta página.</p>'
     + '</div></div>';
 }
-
 async function traerDatos(){
   const r = await fetch(FUENTE + "?t=" + Date.now(), {cache:"no-store"});
   if(!r.ok) throw new Error("El servidor respondió " + r.status + ".");
@@ -2507,7 +2560,6 @@ async function traerDatos(){
   if(!d || !Array.isArray(d.programas) || !Array.isArray(d.proyectos)) throw new Error("El archivo llegó con un formato inesperado.");
   return d;
 }
-
 function aplicar(d){
   const antes = S.progId;
   DATOS.programas = d.programas; DATOS.proyectos = d.proyectos; DATOS.corte = d.corte || "";
@@ -2520,21 +2572,38 @@ function aplicar(d){
     + 'En vivo · ' + esc(DATOS.corte) + '</span>';
   render();
 }
-
+async function refrescar(manual){
+  if(cargando) return; cargando=true;
+  const btn=document.getElementById("reloadBtn");
+  const txt = btn? btn.innerHTML : "";
+  if(manual && btn){ btn.disabled=true; btn.style.opacity=".6";
+    btn.innerHTML='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" style="animation:giro .8s linear infinite"><path d="M13.6 6.6A5.8 5.8 0 1 0 14 9.4"/></svg>Actualizando…'; }
+  const antes = JSON.stringify(DATOS.corte)+":"+(DATOS.proyectos||[]).length;
+  try{
+    const d = await traerDatos();
+    const cambio = (JSON.stringify(d.corte)+":"+d.proyectos.length) !== antes;
+    aplicar(d);
+    if(manual){
+      if(cambio) toast("Datos actualizados","ok","Corte "+d.corte+" · "+d.proyectos.length+" proyectos");
+      else toast("Ya estabas al día","", "El computador de la EGIS publicó estos datos el "+d.corte+".");
+    }
+  }catch(e){
+    if(manual) toast("No se pudo actualizar","cr",e.message);
+    else if(!S.ready){ S.ready=true; bannerError(esc(e.message));
+      const s2=document.getElementById("syncState");
+      if(s2) s2.innerHTML='<span style="display:inline-flex;align-items:center;gap:6px"><i style="width:7px;height:7px;border-radius:50%;background:var(--crit);display:block"></i>Sin conexión al archivo</span>'; }
+  }finally{
+    cargando=false;
+    if(manual && btn){ btn.disabled=false; btn.style.opacity=""; btn.innerHTML=txt; }
+  }
+}
 (function init(){
   S.db = null; S.dl = null;
-  traerDatos().then(aplicar).catch(e=>{
-    S.ready = true;
-    const s = document.getElementById("syncState");
-    if(s) s.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px">'
-      + '<i style="width:7px;height:7px;border-radius:50%;background:var(--crit);display:block"></i>Sin conexión al archivo</span>';
-    bannerError(esc(e.message));
-  });
-  // refresco silencioso mientras la pestaña queda abierta
-  setInterval(()=>{ if(document.visibilityState==="visible") traerDatos().then(aplicar).catch(()=>{}); }, 120000);
-  document.addEventListener("visibilitychange", ()=>{
-    if(document.visibilityState==="visible") traerDatos().then(aplicar).catch(()=>{});
-  });
+  refrescar(false);
+  const b=document.getElementById("reloadBtn");
+  if(b){ b.style.display=""; b.addEventListener("click",()=>refrescar(true)); }
+  setInterval(()=>{ if(document.visibilityState==="visible") refrescar(false); }, 120000);
+  document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") refrescar(false); });
 })();
 </script>
 </body>
