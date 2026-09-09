@@ -338,6 +338,7 @@ svg text{font-family:"Source Sans 3",sans-serif}
       <button class="navbtn" data-v="etapas"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.4 8l3 3 8-8"/><path d="M2.4 13.2h4"/></svg>Matriz de etapas</button>
       <button class="navbtn" data-v="docs"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 1.8h5l3.2 3.2v9.2H4z"/><path d="M9 1.8V5h3.2"/></svg>Carpeta documental</button>
       <button class="navbtn" data-v="avtec"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 13.4V9.1M6 13.4V5.6M10 13.4V7.3M14 13.4V2.9"/></svg>Avance Técnico</button>
+      <button class="navbtn" data-v="avsoc"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="5.6" cy="5" r="2.3"/><path d="M1.9 13.4c0-2.2 1.7-3.7 3.7-3.7s3.7 1.5 3.7 3.7"/><circle cx="11.4" cy="4.4" r="1.8"/><path d="M11.4 8.4c1.7 0 2.8 1.2 2.8 2.9"/></svg>Avance Social</button>
       <button class="navbtn" data-v="cartera"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 1.9l6.1 11.3H1.9z"/><path d="M8 6.4v3.1M8 11.3v.1"/></svg>Cartera crítica</button>
       <button class="navbtn" data-v="evaluacion"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3.4 1.9h9.2v12.2H3.4z"/><path d="M5.8 5.4h4.4M5.8 8h4.4M5.8 10.6h2.6"/></svg>Evaluación previa</button>
       <div class="navlab">Salida</div>
@@ -512,7 +513,7 @@ async function recargar(manual){
 </script>
 <script>
 /* ============================ VISTAS ============================ */
-const TITULOS = {panel:"Panel de control",proyectos:"Proyectos y beneficiarios",etapas:"Matriz de etapas",docs:"Carpeta documental",avtec:"Avance Técnico · obra y módulo de postulación",cartera:"Cartera crítica · detalle de expedientes",evaluacion:"Evaluación previa del encargo",fuentes:"Fuentes de datos",reportes:"Reportes",config:"Configuración"};
+const TITULOS = {panel:"Panel de control",proyectos:"Proyectos y beneficiarios",etapas:"Matriz de etapas",docs:"Carpeta documental",avtec:"Avance Técnico · obra y módulo de postulación",avsoc:"Avance Social · itinerario de acompañamiento",cartera:"Cartera crítica · detalle de expedientes",evaluacion:"Evaluación previa del encargo",fuentes:"Fuentes de datos",reportes:"Reportes",config:"Configuración"};
 
 function render(){
   const pg = prog();
@@ -525,7 +526,7 @@ function render(){
   const v = $("#view");
   if(!S.ready){ v.innerHTML = '<div class="empty">Cargando datos…</div>'; return; }
   if(!pg){ v.innerHTML = vistaVacia(); return; }
-  v.innerHTML = ({panel:vPanel,proyectos:vProyectos,etapas:vEtapas,docs:vDocs,avtec:vAvanceTecnico,cartera:vCartera,evaluacion:vEval,fuentes:vFuentes,reportes:vReportes,config:vConfig})[S.view](pg);
+  v.innerHTML = ({panel:vPanel,proyectos:vProyectos,etapas:vEtapas,docs:vDocs,avtec:vAvanceTecnico,avsoc:vAvanceSocial,cartera:vCartera,evaluacion:vEval,fuentes:vFuentes,reportes:vReportes,config:vConfig})[S.view](pg);
   if(!S.dl) v.querySelectorAll("[data-dl]").forEach(b=>b.remove());
   if(S.view==="panel") dibujarGraficos(pg);
   if(S.view==="reportes") dibujarGraficosReporte(pg);
@@ -534,7 +535,8 @@ function navGate(pg){
   const ps = pg? proyectos() : [];
   const tieneCC   = ps.some(p=>p.cc && Object.keys(p.cc).length);
   const tieneAT   = ps.some(p=>p.at && p.at.obra);
-  const vis = {cartera:tieneCC, avtec:tieneAT};
+  const tieneSOC  = ps.some(p=>p.soc);
+  const vis = {cartera:tieneCC, avtec:tieneAT, avsoc:tieneSOC};
   document.querySelectorAll(".navbtn").forEach(b=>{
     const k=b.dataset.v;
     if(k in vis) b.style.display = vis[k]? "" : "none";
@@ -1356,6 +1358,160 @@ function miniBar(v,tot,color){
   const p=tot? Math.round(v/tot*100):0;
   return `<div class="bar"><div class="track"><div class="fill" style="width:${p}%;background:${color||tonoPct(p)}"></div></div><b style="width:46px">${v}/${tot}</b></div>`;
 }
+/* ============================================================
+   AVANCE SOCIAL · itinerario de actividades del área social
+   Sale de Planilla_Seguimiento_EGIS_Futuro.xlsx (4 hojas).
+   ============================================================ */
+function socDe(){ return proyectos().filter(p=>p.soc); }
+function barraPct(v,color){
+  const c=color||tonoPct(v);
+  return `<div class="bar"><div class="track"><div class="fill" style="width:${Math.max(0,Math.min(100,v))}%;background:${c}"></div></div><b style="width:38px">${v}%</b></div>`;
+}
+function vAvanceSocial(pg){
+  const ps=socDe();
+  if(!ps.length) return '<div class="panel"><div class="empty">Esta cartera no tiene seguimiento social cargado.</div></div>';
+  const n=ps.length;
+  const grupos=ps.filter(p=>p.soc.tipo==="MAVE"), indiv=ps.filter(p=>p.soc.tipo!=="MAVE");
+  const personas=ps.reduce((s,p)=>s+(parseInt(p.soc.integrantes,10)||0),0);
+  const pctProm=Math.round(ps.reduce((s,p)=>s+p.soc.pct,0)/n);
+  const conAsis=grupos.filter(p=>p.soc.asistencia!=null);
+  const asisProm=conAsis.length? Math.round(conAsis.reduce((s,p)=>s+p.soc.asistencia,0)/conAsis.length) : null;
+  const asistidas=ps.reduce((s,p)=>s+(p.soc.asistidas||0),0);
+  const actTot=ps.reduce((s,p)=>s+(p.soc.actividades||0),0);
+  const dias=ps.map(p=>p.soc.dias).filter(v=>v!=null);
+  const sinFecha=ps.filter(p=>(p.soc.sinFecha||[]).length);
+  const nSinFecha=sinFecha.reduce((s,p)=>s+p.soc.sinFecha.length,0);
+  const completos=ps.filter(p=>p.soc.pct>=100);
+  const quietos=ps.filter(p=>p.soc.dias!=null && p.soc.dias>90).sort((a,b)=>b.soc.dias-a.soc.dias);
+  const sinAsis=grupos.filter(p=>p.soc.asistencia==null);
+  const orden=ps.slice().sort((a,b)=>b.soc.pct-a.soc.pct || (a.soc.dias??999)-(b.soc.dias??999));
+
+  /* embudo del itinerario */
+  const et=(pg.etapas||[]).map(e=>{
+    const c=ps.filter(p=>((p.etapas||{})[e.id]||{}).estado==="completa").length;
+    const pa=ps.filter(p=>((p.etapas||{})[e.id]||{}).estado==="parcial").length;
+    const na=ps.filter(p=>((p.etapas||{})[e.id]||{}).estado==="na").length;
+    const base=n-na;
+    return {nombre:e.nombre,desc:e.descripcion||"",ok:c,par:pa,na:na,base:base,
+            pct:base? Math.round((c+pa*0.5)/base*100):0};
+  });
+
+  /* gestores territoriales */
+  const gest={};
+  ps.forEach(p=>(p.soc.gestores||[]).forEach(g=>{
+    if(!g) return;
+    gest[g]=gest[g]||{suj:0,act:0,pcts:[]};
+    gest[g].suj++; gest[g].act+=p.soc.actividades||0;
+    if(p.soc.tipo==="MAVE" && p.soc.asistencia!=null) gest[g].pcts.push(p.soc.asistencia);
+  }));
+  const gArr=Object.keys(gest).map(k=>({lab:k,...gest[k],
+    asis:gest[k].pcts.length? Math.round(gest[k].pcts.reduce((a,b)=>a+b,0)/gest[k].pcts.length):null}))
+    .sort((a,b)=>b.suj-a.suj);
+
+  /* comunas */
+  const com={};
+  ps.forEach(p=>{ const c=p.comuna||"Sin comuna"; com[c]=com[c]||{n:0,pct:[]}; com[c].n++; com[c].pct.push(p.soc.pct); });
+  const cArr=Object.keys(com).map(k=>({lab:k,n:com[k].n,
+    pct:Math.round(com[k].pct.reduce((a,b)=>a+b,0)/com[k].pct.length)})).sort((a,b)=>b.n-a.n);
+
+  const alertas=[];
+  if(nSinFecha) alertas.push(["wa",nSinFecha,"Actividades hechas sin fecha anotada",
+    "Un gestor territorial las tiene a su cargo en el registro de actividades, pero nadie anotó la fecha, así que no se pueden dar por realizadas. Afecta a "+sinFecha.length+" "+(sinFecha.length===1?"caso":"casos")+": "+sinFecha.slice(0,6).map(p=>p.postulante).join(", ")+(sinFecha.length>6?"…":"")+"."]);
+  if(sinAsis.length) alertas.push(["wa",sinAsis.length,"Grupos sin registro de asistencia",
+    "No se anotó el número de asistentes, así que no se puede calcular el porcentaje: "+sinAsis.slice(0,6).map(p=>p.postulante).join(", ")+(sinAsis.length>6?"…":"")+"."]);
+  if(quietos.length) alertas.push(["cr",quietos.length,"Más de 90 días sin actividad",
+    quietos.slice(0,6).map(p=>p.postulante+" ("+p.soc.dias+" d)").join(" · ")+(quietos.length>6?"…":"")+"."]);
+  if(completos.length) alertas.push(["ok",completos.length,"Itinerario social completo",
+    completos.map(p=>p.postulante).join(", ")+"."]);
+  if(!alertas.length) alertas.push(["ok",0,"Sin alertas","El seguimiento social está al día."]);
+
+  return `
+  <div class="stats" style="margin-bottom:14px">
+    <div class="stat"><div class="k">Avance del itinerario</div><div class="v" style="color:${tonoPct(pctProm)}">${pctProm}<small>%</small></div>
+      <div class="meter"><i style="width:${pctProm}%;background:${tonoPct(pctProm)}"></i></div>
+      <div class="m">promedio de avance de los ${n} casos</div></div>
+    <div class="stat"><div class="k">En seguimiento</div><div class="v">${n}</div>
+      <div class="m">${grupos.length} grupo${grupos.length===1?"":"s"} MAVE · ${indiv.length} CSR individual${indiv.length===1?"":"es"}${personas?" · "+personas+" personas":""}</div></div>
+    <div class="stat"><div class="k">Asistencia grupal</div><div class="v" style="color:${asisProm!=null?tonoPct(asisProm):"var(--ink-3)"}">${asisProm!=null?asisProm:"—"}${asisProm!=null?"<small>%</small>":""}</div>
+      ${asisProm!=null?`<div class="meter"><i style="width:${asisProm}%;background:${tonoPct(asisProm)}"></i></div>`:""}
+      <div class="m">${conAsis.length} de ${grupos.length} grupos MAVE con asistentes anotados</div></div>
+    <div class="stat"><div class="k">Actividades realizadas</div><div class="v">${asistidas}</div>
+      <div class="m">con fecha en las hojas de actividades</div></div>
+    <div class="stat"><div class="k">Casos sin movimiento</div><div class="v" style="color:${quietos.length?"var(--crit)":"var(--good)"}">${quietos.length}<small>/${n}</small></div>
+      <div class="m">${dias.length? "más de 90 días · la más reciente hace "+Math.min(...dias)+" d":"sin fechas registradas"}</div></div>
+    <div class="stat"><div class="k">Calidad del registro</div><div class="v" style="color:${nSinFecha?"var(--warn)":"var(--good)"}">${nSinFecha}</div>
+      <div class="m">actividades sin fecha anotada</div></div>
+  </div>
+
+  <div class="grid" style="grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start;margin-bottom:14px">
+    <div class="panel">
+      <header><h3>Itinerario social</h3><span class="hint">cuántos completaron cada actividad</span></header>
+      <div class="scroll"><table><tbody>${et.map(e=>`<tr>
+        <td style="font-size:12.5px">${esc(e.nombre)}
+          ${e.desc?`<div style="font-size:10.5px;color:var(--ink-3)">${esc(e.desc)}</div>`:""}</td>
+        <td style="width:190px">${barraPct(e.pct)}
+          <div style="font-size:10.5px;color:var(--ink-3);text-align:right">${e.ok} de ${e.base}${e.par?" · "+e.par+" sin fecha":""}${e.na?" · "+e.na+" no aplica":""}</div></td>
+      </tr>`).join("")}</tbody></table></div>
+    </div>
+    <div class="panel">
+      <header><h3>Alertas</h3><span class="hint">${alertas.length} activa${alertas.length===1?"":"s"}</span></header>
+      <div>${alertas.map(a=>`<div class="alert ${a[0]}"><div class="ic">${esc(a[1])}</div><div><div class="t">${esc(a[2])}</div><div class="d">${esc(a[3])}</div></div></div>`).join("")}</div>
+    </div>
+  </div>
+
+  <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;margin-bottom:14px">
+    <div class="panel">
+      <header><h3>Gestores territoriales</h3><span class="hint">carga y asistencia lograda</span></header>
+      <div class="scroll"><table class="cards"><thead><tr><th>Gestor</th><th class="num">A cargo</th><th class="num">Actividades</th><th style="width:150px">Asistencia</th></tr></thead>
+      <tbody>${gArr.length? gArr.map(g=>`<tr>
+        <td data-l="Gestor" class="tit">${esc(g.lab)}</td>
+        <td data-l="A cargo" class="num">${g.suj}</td>
+        <td data-l="Actividades" class="num">${g.act}</td>
+        <td data-l="Asistencia">${g.asis!=null? barraPct(g.asis) : '<span style="color:var(--ink-3);font-size:11.5px">sin registro</span>'}</td>
+      </tr>`).join("") : '<tr><td class="empty">Sin gestor anotado.</td></tr>'}</tbody></table></div>
+    </div>
+    <div class="panel">
+      <header><h3>Por comuna</h3><span class="hint">avance del itinerario</span></header>
+      <div class="scroll"><table class="cards"><thead><tr><th>Comuna</th><th class="num">Casos</th><th style="width:170px">Avance</th></tr></thead>
+      <tbody>${cArr.map(c=>`<tr>
+        <td data-l="Comuna" class="tit">${esc(c.lab)}</td>
+        <td data-l="Casos" class="num">${c.n}</td>
+        <td data-l="Avance">${barraPct(c.pct)}</td>
+      </tr>`).join("")}</tbody></table></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <header><h3>Estado por grupo y beneficiario</h3><span class="hint">se lee de la planilla de seguimiento social</span>
+      <span class="spacer"></span><button class="btn" data-dl onclick="bajarSocial()">Descargar CSV</button></header>
+    <div class="scroll"><table class="cards">
+      <thead><tr><th style="min-width:210px">Grupo o beneficiario</th><th>Tipo</th><th>Comuna</th><th class="num">Integr.</th>
+        <th style="width:165px">Itinerario</th><th style="width:140px">Asistencia</th><th>Última act.</th><th>Gestor</th><th style="min-width:150px">Próxima actividad</th></tr></thead>
+      <tbody>${orden.map(p=>{const s=p.soc; return `<tr onclick="abrir('${esc(p.id)}')" style="cursor:pointer">
+        <td data-l="" class="tit">${esc(p.postulante)}</td>
+        <td data-l="Tipo">${esc(s.tipo==="MAVE"?"MAVE · grupo":"CSR · individual")}</td>
+        <td data-l="Comuna">${esc(p.comuna||"—")}</td>
+        <td data-l="Integrantes" class="num">${esc(s.integrantes||"—")}</td>
+        <td data-l="Itinerario">${barraPct(s.pct)}
+          <div style="font-size:10.5px;color:var(--ink-3);text-align:right">${s.hechas} de ${s.base}</div></td>
+        <td data-l="Asistencia">${s.tipo==="MAVE"
+            ? (s.asistencia!=null? barraPct(s.asistencia) : '<span style="color:var(--ink-3);font-size:11.5px">sin registro</span>')
+            : `<span style="font-size:11.5px">asistió a ${s.asistidas} de ${s.actividades}</span>`}</td>
+        <td data-l="Última actividad">${esc(s.ultima||"—")}${s.dias!=null?`<div style="font-size:10.5px;color:${s.dias>90?"var(--crit)":"var(--ink-3)"}">hace ${s.dias} d</div>`:""}</td>
+        <td data-l="Gestor">${esc((s.gestores||[])[0]||"—")}</td>
+        <td data-l="Próxima">${esc((s.pendientes||[])[0]||"Itinerario completo")}</td>
+      </tr>`;}).join("")}</tbody></table></div>
+  </div>`;
+}
+function bajarSocial(){
+  const ps=socDe();
+  const filas=[["Grupo o beneficiario","Tipo","Comuna","Localidad","Integrantes","Actividades hechas","Base","Avance %","Asistencia %","Actividades registradas","Última actividad","Días sin actividad","Gestor territorial","Profesional responsable","Próxima actividad","Sin fecha anotada","Estado","Observaciones"]];
+  ps.forEach(p=>{const s=p.soc; filas.push([p.postulante,s.tipo,p.comuna,p.localidad,s.integrantes,s.hechas,s.base,s.pct,
+    s.asistencia!=null?s.asistencia:"",s.actividades,s.ultima,s.dias!=null?s.dias:"",(s.gestores||[]).join(" / "),s.profesional,
+    (s.pendientes||[])[0]||"",(s.sinFecha||[]).join(" / "),p.estado,p.obs]);});
+  bajarCSV("avance-social.csv",filas);
+}
+
 function vAvanceTecnico(pg){
   const ps=atDe();
   if(!ps.length) return '<div class="panel"><div class="empty">Esta cartera no tiene beneficiarios con avance técnico medido.</div></div>';
