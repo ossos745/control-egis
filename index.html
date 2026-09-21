@@ -681,23 +681,30 @@ function vPanel(pg){
       <div class="m">Ninguna etapa registrada</div></div>
     ${hayFases?`<div class="stat"><div class="k">Avance por fases</div><div class="v" style="color:${tonoPct(pFase)}">${pFase}<small>%</small></div>
       <div class="meter"><i style="width:${pFase}%;background:${tonoPct(pFase)}"></i></div>
-      <div class="m">qué tan lejos llegó el expediente</div></div>`:""}
+      <div class="m">qué tan lejos llegó el expediente, en promedio</div></div>`:""}
     <div class="stat"><div class="k">Plazo comprometido</div><div class="v">${d===null?"—":(d<0?"−"+Math.abs(d):d)}<small>${d===null?"":" días"}</small></div>
       <div class="m">${pg.plazo? fmtDate(pg.plazo) : "Sin definir"}</div></div>
   </div>
 
   ${hayFases?`<div class="panel" style="margin-bottom:14px">
-    <header><h3>Fase del proceso</h3><span class="hint">cada fase aporta un % · ${conFase} beneficiarios</span></header>
+    <header><h3>¿Hasta dónde llegó cada expediente?</h3><span class="hint">${conFase} beneficiarios repartidos en las seis fases</span></header>
     <div class="pad" style="padding-bottom:10px">
       <div style="display:flex;height:26px;border-radius:5px;overflow:hidden;border:1px solid var(--line)">
         ${FASES_DEF.filter(x=>cFase[x.k]).map(x=>`<div title="${esc(x.k)}: ${cFase[x.k]}" style="width:${cFase[x.k]/conFase*100}%;background:${x.col};display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">${cFase[x.k]/conFase>=.07?cFase[x.k]:""}</div>`).join("")}
       </div>
     </div>
-    <div class="scroll"><table class="cards"><thead><tr><th style="min-width:200px">Fase</th><th class="num">Vale</th><th class="num">Personas</th><th style="min-width:230px">Qué significa</th></tr></thead>
+    <div class="pad" style="padding-top:0;padding-bottom:6px;font-size:12px;color:var(--ink-2);line-height:1.5">
+      Cada persona está en <b>una sola</b> fase: la más alta que alcanzó. Llegar a una fase vale
+      los puntos de la tercera columna, y el promedio de todos da el <b>avance por fases: ${pFase}%</b>.
+    </div>
+    <div class="scroll"><table class="cards"><thead><tr><th style="min-width:200px">Fase del expediente</th>
+      <th class="num" style="width:120px">Personas hoy<br>en esta fase</th>
+      <th class="num" style="width:110px">Si llega aquí,<br>vale</th>
+      <th style="min-width:230px">Qué significa</th></tr></thead>
       <tbody>${FASES_DEF.map(x=>`<tr>
         <td data-l="" class="tit"><span class="tag"><i class="dot" style="background:${x.col}"></i>${esc(x.k)}</span></td>
-        <td data-l="Vale" class="num mono" style="color:var(--ink-2)">${x.peso}%</td>
-        <td data-l="Personas" class="num mono"><b>${cFase[x.k]||0}</b></td>
+        <td data-l="Personas hoy en esta fase" class="num mono"><b>${cFase[x.k]||0}</b><small style="color:var(--ink-3)"> de ${conFase}</small></td>
+        <td data-l="Si llega aquí, vale" class="num mono" style="color:var(--ink-2)">${x.peso}<small style="color:var(--ink-3)"> pts de 100</small></td>
         <td data-l="Qué significa" style="font-size:12px;color:var(--ink-3)">${esc(x.d)}</td>
       </tr>`).join("")}</tbody></table></div>
   </div>`:""}
@@ -1693,13 +1700,23 @@ function vAvanceTecnico(pg){
 
   <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);align-items:start;margin-bottom:14px">
     <div class="panel">
-      <header><h3>Fase del proceso</h3><span class="hint">cada fase vale un % del avance</span></header>
-      <div class="scroll"><table><tbody>${FASES_DEF.map(f=>`<tr>
-        <td style="font-size:12.5px">${chipFase(f.k)}
+      <header><h3>¿Hasta dónde llegó cada expediente?</h3>
+        <span class="hint">las seis fases van en escalera, de la más atrasada a la más avanzada</span></header>
+      <div class="pad" style="padding-bottom:6px;font-size:12px;color:var(--ink-2);line-height:1.5">
+        Cada persona está en <b>una sola</b> fase: la más alta que alcanzó. Llegar a una fase
+        vale los puntos de la columna del medio, y el promedio de todos da el
+        <b>avance por fases de la cartera: ${pFase}%</b>.
+      </div>
+      <div class="scroll"><table class="cards">
+        <thead><tr><th style="min-width:230px">Fase del expediente</th>
+          <th class="num" style="width:118px">Si llega aquí,<br>vale</th>
+          <th style="width:185px">Cuántas personas<br>están hoy en ella</th></tr></thead>
+        <tbody>${FASES_DEF.map(f=>{const c=cuenta[f.k]||0; return `<tr>
+        <td data-l="" class="tit" style="font-size:12.5px">${chipFase(f.k)}
           <div style="font-size:10.5px;color:var(--ink-3);margin-top:2px">${esc(f.d)}</div></td>
-        <td class="num mono" style="width:54px;color:var(--ink-2)">${f.peso}%</td>
-        <td style="width:150px"><div class="bar"><div class="track"><div class="fill" style="width:${Math.round((cuenta[f.k]||0)/n*100)}%;background:${f.col}"></div></div><b>${cuenta[f.k]||0}</b></div></td>
-      </tr>`).join("")}</tbody></table></div>
+        <td data-l="Si llega aquí, vale" class="num mono" style="color:var(--ink-2)">${f.peso}<small style="color:var(--ink-3)"> pts de 100</small></td>
+        <td data-l="Personas hoy en ella"><div class="bar"><div class="track"><div class="fill" style="width:${Math.round(c/n*100)}%;background:${f.col}"></div></div><b style="width:72px">${c} de ${n}</b></div></td>
+      </tr>`;}).join("")}</tbody></table></div>
     </div>
     <div class="panel">
       <header><h3>Alertas</h3><span class="hint">${alertas.length} activa${alertas.length===1?"":"s"}</span></header>
@@ -2592,6 +2609,7 @@ const GUIAS = {
  panel:{t:"Panel de control",
   q:"La foto de la cartera completa en una pantalla: cuánta gente hay, cuántos terminaron, quién va atrasado y qué alerta hay que mirar hoy.",
   p:[["Los recuadros de arriba","Personas en la cartera, cuántas terminaron, cuántas van en marcha y cuántas no han empezado. Si la cartera tiene fases, también el avance por fases."],
+     ["Las fases","Cada persona está en una sola fase: la más alta que alcanzó. Llegar a una vale puntos sobre 100, y el promedio de todos es el avance por fases. Los puntos de una fila no son cuánta gente hay ahí — eso va en la columna de al lado."],
      ["Cómo va cada persona","La barra de colores reparte a los beneficiarios por tramo de avance. Abajo, la tabla los ordena de menor a mayor avance: los que están peor salen primero, a propósito."],
      ["Próximo paso","La primera etapa que todavía no está lista. Es lo que hay que hacer con esa persona."],
      ["Antecedentes cargados","Qué porcentaje de los documentos del expediente ya está en la carpeta, y cuántos son de cuántos."],
@@ -2625,7 +2643,9 @@ const GUIAS = {
   p:[["De dónde sale cada persona","De la columna NOMBRE de la nómina de cartera crítica. Si agregas a alguien ahí, en la siguiente pasada el programa sale a buscar sus carpetas."],
      ["Cómo se decide una etapa","Un archivo con el nombre del beneficiario o un documento tipo cuentan como completa. Solo archivos de otras personas, parcial. Carpeta vacía, no realizada."],
      ["No corresponde","Deja dentro de la carpeta un archivo cuyo nombre diga «no corresponde» y esa etapa sale del cálculo del porcentaje."],
-     ["Las fases","Miden qué tan lejos llegó el expediente, no cuánto papeleo tiene. Cada fase vale un porcentaje fijo y suben en escalera; la tabla del panel las lista con su valor."],
+     ["Las fases","Miden hasta dónde llegó el expediente, no cuánto papeleo tiene. Van en escalera y cada persona está en una sola: la más alta que alcanzó."],
+     ["Los puntos de cada fase","Llegar a una fase vale una cantidad fija de puntos sobre 100 — 30 al abrir carpeta de obra, 80 al tener las dos carpetas. Ese número NO es el porcentaje de gente que está ahí: la cantidad de personas va en su propia columna, al lado."],
+     ["Avance por fases","El promedio de los puntos de todos. Dice qué tan lejos llegó la cartera como conjunto."],
      ["El global","Promedia tres cosas: la fase, la documentación de obra y las carpetas del módulo."]],
   c:"El programa solo lee nombres de archivo, tamaños y fechas. Nunca abre los documentos."},
 
