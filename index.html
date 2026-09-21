@@ -1342,8 +1342,8 @@ async function cargarMasivo(){
    El avance se lee de las carpetas del computador de la EGIS:
    ingreso en obra (22 documentos) y módulo de postulación (26 carpetas).
    ============================================================ */
-const FASES=["Sin iniciar","Terreno resuelto","Ingresado en obra","Módulo abierto","En obra y en módulo","Módulo completo"];
-const FASE_COLOR={"Sin iniciar":"var(--line-2)","Terreno resuelto":"var(--serious)","Ingresado en obra":"var(--warn)",
+const FASES=["Sin iniciar","Con ensayo de absorción","Ingresado en obra","Módulo abierto","En obra y en módulo","Módulo completo"];
+const FASE_COLOR={"Sin iniciar":"var(--line-2)","Con ensayo de absorción":"var(--serious)","Ingresado en obra":"var(--warn)",
   "Módulo abierto":"var(--s4)","En obra y en módulo":"var(--s3)","Módulo completo":"var(--good)"};
 function atDe(){ return proyectos().filter(p=>p.at && p.at.obra); }
 function cuadro(st){
@@ -1562,8 +1562,8 @@ function vAvanceTecnico(pg){
   const sinNada=ps.filter(p=>p.at.fase==="Sin iniciar").length;
   if(sinNada) alertas.push(["cr",sinNada,"Sin ninguna carpeta abierta",
     sinNada+" beneficiario"+(sinNada>1?"s":"")+" no tiene carpeta de obra ni módulo de postulación, y tampoco informe de absorción."]);
-  if(conAbs) alertas.push(["ok",conAbs,"Terreno resuelto, esperando apertura",
-    conAbs+" beneficiario"+(conAbs>1?"s":"")+" ya tiene informe de absorción pero todavía no se le abre carpeta de obra."]);
+  if(conAbs) alertas.push(["ok",conAbs,"Suelo ensayado, esperando apertura de carpeta",
+    conAbs+" beneficiario"+(conAbs>1?"s":"")+" ya tiene el ensayo de absorción del suelo —la tasa de infiltración para dimensionar la solución sanitaria— pero todavía no se le abre carpeta de obra."]);
   if(nocorr) alertas.push(["ok",nocorr,"Carpetas marcadas «no corresponde»",
     listaNC.length? listaNC.map(o=>o.p.split(" ")[0]+": "+o.x).join(" · ")+". No se cuentan en el porcentaje."
                   : nocorr+" carpetas quedaron fuera del cálculo porque el documento no aplica a ese beneficiario."]);
