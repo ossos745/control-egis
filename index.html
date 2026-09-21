@@ -344,6 +344,8 @@ svg text{font-family:"Source Sans 3",sans-serif}
       <div class="navlab">Salida</div>
       <button class="navbtn" data-v="reportes"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.5 13.5V7M6.8 13.5V3M11.1 13.5V9.4"/><path d="M1.5 13.5h13"/></svg>Reportes</button>
       <button class="navbtn" data-v="fuentes"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="8" cy="3.6" rx="5.4" ry="2"/><path d="M2.6 3.6v8.8c0 1.1 2.4 2 5.4 2s5.4-.9 5.4-2V3.6"/><path d="M2.6 8c0 1.1 2.4 2 5.4 2s5.4-.9 5.4-2"/></svg>Fuentes de datos</button>
+      <div class="navlab">Ayuda</div>
+      <button class="navbtn" id="btnGuia" onclick="abrirGuia()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.2"/><path d="M6.1 6.1c0-1.1.9-1.9 1.9-1.9s1.9.8 1.9 1.9c0 1.4-1.9 1.3-1.9 2.9"/><path d="M8 11.4v.1"/></svg>Guía de esta pestaña</button>
     </nav>
     <div class="railfoot">
       <div id="syncState"></div>
@@ -400,6 +402,12 @@ function avEtapas(p,pg){
   let s=0,n=0;
   for(const e of et){ const v=(p.etapas||{})[e.id]; if(esNA(v)) continue; n++; s += (EST[(v&&v.estado)||"no"]||EST.no).w; }
   return n? s/n : 1;
+}
+function docsDe(p,pg){
+  const bl = pg && pg.bloques || [];
+  let ok=0,base=0,na=0;
+  for(const b of bl){ const v=(p.bloques||{})[b.id]||{}; if(esNA(v)){na++;continue;} base++; if(v.cargado) ok++; }
+  return base? (ok+" de "+base+(na?" · "+na+" no aplica":"")) : "sin antecedentes definidos";
 }
 function avDocs(p,pg){
   const bl = pg && pg.bloques || []; if(!bl.length) return 0;
@@ -621,6 +629,11 @@ function vPanel(pg){
   conAv.forEach(x=>cuenta[tramoDe(x.a).k]++);
   const comp=cuenta.fin, cero=cuenta.cero, marcha=n-comp-cero;
   const criticos = conAv.filter(x=>x.a<.34).sort((a,b)=>a.a-b.a);
+  const hayFases = ps.some(p=>faseDe(p));
+  const pFase = hayFases? (avanceFases(ps)||0) : null;
+  const cFase = {}; FASES.forEach(k=>cFase[k]=0);
+  if(hayFases) ps.forEach(p=>{ const k=faseDe(p); if(k in cFase) cFase[k]++; });
+  const conFase = hayFases? ps.filter(p=>faseDe(p)).length : 0;
   const comunas = agrupaComunas(ps,pg);
   const grupos = new Set(ps.map(p=>p.grupo).filter(Boolean));
 
@@ -666,9 +679,28 @@ function vPanel(pg){
     <div class="stat"><div class="k">Sin empezar</div><div class="v" style="color:${cero?"var(--crit)":"var(--ink)"}">${cero}</div>
       <div class="meter"><i style="width:${Math.round(cero/n*100)}%;background:var(--crit)"></i></div>
       <div class="m">Ninguna etapa registrada</div></div>
+    ${hayFases?`<div class="stat"><div class="k">Avance por fases</div><div class="v" style="color:${tonoPct(pFase)}">${pFase}<small>%</small></div>
+      <div class="meter"><i style="width:${pFase}%;background:${tonoPct(pFase)}"></i></div>
+      <div class="m">qué tan lejos llegó el expediente</div></div>`:""}
     <div class="stat"><div class="k">Plazo comprometido</div><div class="v">${d===null?"—":(d<0?"−"+Math.abs(d):d)}<small>${d===null?"":" días"}</small></div>
       <div class="m">${pg.plazo? fmtDate(pg.plazo) : "Sin definir"}</div></div>
   </div>
+
+  ${hayFases?`<div class="panel" style="margin-bottom:14px">
+    <header><h3>Fase del proceso</h3><span class="hint">cada fase aporta un % · ${conFase} beneficiarios</span></header>
+    <div class="pad" style="padding-bottom:10px">
+      <div style="display:flex;height:26px;border-radius:5px;overflow:hidden;border:1px solid var(--line)">
+        ${FASES_DEF.filter(x=>cFase[x.k]).map(x=>`<div title="${esc(x.k)}: ${cFase[x.k]}" style="width:${cFase[x.k]/conFase*100}%;background:${x.col};display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">${cFase[x.k]/conFase>=.07?cFase[x.k]:""}</div>`).join("")}
+      </div>
+    </div>
+    <div class="scroll"><table class="cards"><thead><tr><th style="min-width:200px">Fase</th><th class="num">Vale</th><th class="num">Personas</th><th style="min-width:230px">Qué significa</th></tr></thead>
+      <tbody>${FASES_DEF.map(x=>`<tr>
+        <td data-l="" class="tit"><span class="tag"><i class="dot" style="background:${x.col}"></i>${esc(x.k)}</span></td>
+        <td data-l="Vale" class="num mono" style="color:var(--ink-2)">${x.peso}%</td>
+        <td data-l="Personas" class="num mono"><b>${cFase[x.k]||0}</b></td>
+        <td data-l="Qué significa" style="font-size:12px;color:var(--ink-3)">${esc(x.d)}</td>
+      </tr>`).join("")}</tbody></table></div>
+  </div>`:""}
 
   <div class="panel" style="margin-bottom:14px">
     <header><h3>Cómo va cada persona</h3><span class="hint">${n} beneficiarios · de menor a mayor avance</span><span class="spacer"></span>
@@ -682,7 +714,7 @@ function vPanel(pg){
       </div>
     </div>
     <div class="scroll" style="max-height:620px"><table class="cards">
-      <thead><tr><th style="width:38px">N°</th><th>Beneficiario</th><th>Comuna</th>${hayGrupo?"<th>Grupo</th>":""}<th class="num">Etapas listas</th><th>Próximo paso</th><th style="width:150px">Avance del proceso</th><th class="num">Docs</th>${hayEstado?"<th>Estado declarado</th>":""}${hayResp?"<th>Responsable</th>":""}</tr></thead>
+      <thead><tr><th style="width:38px">N°</th><th style="min-width:200px">Beneficiario</th><th>Comuna</th>${hayGrupo?"<th>Grupo</th>":""}<th class="num">Etapas listas</th><th>Próximo paso</th><th style="width:150px">Avance del proceso</th><th class="num" style="width:92px">Antecedentes<br>cargados</th>${hayEstado?"<th>Estado declarado</th>":""}${hayResp?"<th>Responsable</th>":""}</tr></thead>
       <tbody>${filas.map(x=>{
         const t=tramoDe(x.a), ea=etapaActual(x.p,pg);
         return `<tr>
@@ -694,7 +726,8 @@ function vPanel(pg){
           <td class="num mono" data-l="Etapas listas" style="color:var(--ink-2)"><span>${ea.listas}<span style="color:var(--ink-3)">/${ea.tot}</span></span></td>
           <td data-l="Próximo paso"><span class="tag"><i class="dot" style="background:${t.col}"></i>${x.a>=1?"Proceso terminado":esc(ea.nombre)}</span></td>
           <td data-l="Avance">${barra(x.a)}</td>
-          <td class="num" data-l="Docs" style="color:var(--ink-2)">${pct(x.dd)}%</td>
+          <td class="num" data-l="Antecedentes cargados" style="color:var(--ink-2)">${pct(x.dd)}%
+            <div style="font-size:10.5px;color:var(--ink-3)">${docsDe(x.p,pg)}</div></td>
           ${hayEstado?`<td data-l="Estado">${chipEstado(x.p.estado)}</td>`:""}
           ${hayResp?`<td data-l="Responsable" style="color:var(--ink-2)">${esc(x.p.responsable||"—")}</td>`:""}
         </tr>`;}).join("")}</tbody>
@@ -746,7 +779,8 @@ function barra(a){
 const EST_TONO=[[/renuncia|no pago/i,"var(--crit)"],[/cerrado al 100|100% listo/i,"var(--good)"],[/^cerrado$/i,"var(--good)"],
   [/cerrado, falta|certificado .*pendiente|por cerrar|50% listo/i,"var(--s3)"],[/falta cierre 50|falta certificado 50/i,"var(--warn)"],
   [/falta cierre 100/i,"var(--serious)"]];
-function tonoEstado(e){ for(const [re,c] of EST_TONO) if(re.test(e||"")) return c; return "var(--ink-3)"; }
+function tonoEstado(e){ if(e && (e in FASE_COLOR)) return FASE_COLOR[e];
+  for(const [re,c] of EST_TONO) if(re.test(e||"")) return c; return "var(--ink-3)"; }
 function chipEstado(e){ return e? `<span class="tag"><i class="dot" style="background:${tonoEstado(e)}"></i>${esc(e)}</span>` : '<span style="color:var(--ink-3);font-size:12px">—</span>'; }
 function agrupaEstados(ps){
   const g={}; ps.forEach(p=>{ const k=p.estado||"Sin estado declarado"; g[k]=(g[k]||0)+1; });
@@ -876,7 +910,7 @@ function vProyectos(pg){
   <div class="panel">
     <header><h3>${ps.length} de ${all.length} proyectos</h3><span class="hint">Haz clic en un postulante para abrir su ficha</span></header>
     <div class="scroll"><table>
-      <thead><tr>${th("numero","N°")}${th("codigo","Código")}${th("postulante","Postulante")}${th("comuna","Comuna")}${th("grupo","Grupo")}${th("estado","Estado declarado")}${th("avance","Avance de etapas")}${th("docs","Docs")}${th("responsable","Responsable")}<th>Últ. actualización</th></tr></thead>
+      <thead><tr>${th("numero","N°")}${th("codigo","Código")}${th("postulante","Postulante")}${th("comuna","Comuna")}${th("grupo","Grupo")}${th("estado","Estado declarado")}${th("avance","Avance de etapas")}${th("docs","Antecedentes cargados")}${th("responsable","Responsable")}<th>Últ. actualización</th></tr></thead>
       <tbody>${ps.map(p=>{
         const a=avEtapas(p,pg), et=(pg.etapas||[]);
         const done=et.filter(e=>(((p.etapas||{})[e.id]||{}).estado)==="completa").length;
@@ -1342,9 +1376,28 @@ async function cargarMasivo(){
    El avance se lee de las carpetas del computador de la EGIS:
    ingreso en obra (22 documentos) y módulo de postulación (26 carpetas).
    ============================================================ */
-const FASES=["Sin iniciar","Con ensayo de absorción","Ingresado en obra","Módulo abierto","En obra y en módulo","Módulo completo"];
-const FASE_COLOR={"Sin iniciar":"var(--line-2)","Con ensayo de absorción":"var(--serious)","Ingresado en obra":"var(--warn)",
-  "Módulo abierto":"var(--s4)","En obra y en módulo":"var(--s3)","Módulo completo":"var(--good)"};
+/* Las seis fases del proceso técnico, con el peso que aporta cada una.
+   La fase mide QUÉ TAN LEJOS llegó el expediente; obra y módulo miden
+   qué tan completo está el papeleo de cada parte. */
+const FASES_DEF=[
+ {k:"Sin iniciar",             peso:0,   col:"var(--crit)",    d:"No hay ninguna carpeta ni informe a su nombre"},
+ {k:"Con ensayo de absorción", peso:10,  col:"var(--serious)", d:"Está el ensayo de absorción del suelo; falta abrir carpeta"},
+ {k:"Ingresado en obra",       peso:30,  col:"var(--warn)",    d:"Tiene carpeta de obra abierta"},
+ {k:"Módulo abierto",          peso:55,  col:"var(--s4)",      d:"Tiene además la carpeta MP_ del módulo de postulación"},
+ {k:"En obra y en módulo",     peso:80,  col:"var(--s3)",      d:"Las dos carpetas, con la documentación de obra completa"},
+ {k:"Módulo completo",         peso:100, col:"var(--good)",    d:"Todas las carpetas del módulo tienen su documento"}
+];
+const FASES=FASES_DEF.map(f=>f.k);
+const FASE_COLOR=Object.fromEntries(FASES_DEF.map(f=>[f.k,f.col]));
+const FASE_PESO =Object.fromEntries(FASES_DEF.map(f=>[f.k,f.peso]));
+const FASE_DESC =Object.fromEntries(FASES_DEF.map(f=>[f.k,f.d]));
+function faseDe(p){ return (p && p.at && p.at.fase) || ""; }
+function pesoFase(p){ const f=faseDe(p); return f in FASE_PESO? FASE_PESO[f] : null; }
+function avanceFases(ps){
+  const v=ps.map(pesoFase).filter(x=>x!=null);
+  return v.length? Math.round(v.reduce((a,b)=>a+b,0)/v.length) : null;
+}
+
 function atDe(){ return proyectos().filter(p=>p.at && p.at.obra); }
 function cuadro(st){
   if(st==="na") return '<i class="nabox" title="No corresponde"></i>';
@@ -1520,7 +1573,9 @@ function vAvanceTecnico(pg){
   const enMod=ps.filter(p=>p.at.modulo.ingresado).length;
   const pObra=Math.round(ps.reduce((s,p)=>s+p.at.obra.pct,0)/n);
   const pMod=Math.round(ps.reduce((s,p)=>s+p.at.modulo.pct,0)/n);
-  const global=Math.round((pObra+pMod)/2);
+  const pFase=avanceFases(ps)||0;
+  const global=Math.round((pObra+pMod+pFase)/3);
+  const enUltima=ps.filter(p=>faseDe(p)===FASES[FASES.length-1]).length;
   const conAbs=ps.filter(p=>p.at.absorcion).length;
   const ajenos=ps.reduce((s,p)=>s+(p.at.modulo.ajenos||0),0);
   const nocorr=ps.reduce((s,p)=>s+(p.at.modulo.na||0)+(p.at.obra.na||0),0);
@@ -1620,7 +1675,10 @@ function vAvanceTecnico(pg){
   <div class="stats" style="margin-bottom:14px">
     <div class="stat"><div class="k">Avance técnico global</div><div class="v" style="color:${tonoPct(global)}">${global}<small>%</small></div>
       <div class="meter"><i style="width:${global}%;background:${tonoPct(global)}"></i></div>
-      <div class="m">promedio de obra y módulo</div></div>
+      <div class="m">promedio de fase, obra y módulo</div></div>
+    <div class="stat"><div class="k">Avance por fases</div><div class="v" style="color:${tonoPct(pFase)}">${pFase}<small>%</small></div>
+      <div class="meter"><i style="width:${pFase}%;background:${tonoPct(pFase)}"></i></div>
+      <div class="m">${enUltima} de ${n} llegó a «${esc(FASES[FASES.length-1])}»</div></div>
     <div class="stat"><div class="k">Ingresados en obra</div><div class="v">${enObra}<small>/${n}</small></div>
       <div class="meter"><i style="width:${enObra/n*100}%;background:${tonoPct(enObra/n*100)}"></i></div>
       <div class="m">avance documental ${pObra}%</div></div>
@@ -1635,10 +1693,12 @@ function vAvanceTecnico(pg){
 
   <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);align-items:start;margin-bottom:14px">
     <div class="panel">
-      <header><h3>Etapa del proceso</h3><span class="hint">en qué punto está cada beneficiario</span></header>
-      <div class="scroll"><table><tbody>${FASES.map(f=>`<tr>
-        <td style="font-size:12.5px">${chipFase(f)}</td>
-        <td style="width:170px"><div class="bar"><div class="track"><div class="fill" style="width:${Math.round((cuenta[f]||0)/n*100)}%;background:${FASE_COLOR[f]}"></div></div><b>${cuenta[f]||0}</b></div></td>
+      <header><h3>Fase del proceso</h3><span class="hint">cada fase vale un % del avance</span></header>
+      <div class="scroll"><table><tbody>${FASES_DEF.map(f=>`<tr>
+        <td style="font-size:12.5px">${chipFase(f.k)}
+          <div style="font-size:10.5px;color:var(--ink-3);margin-top:2px">${esc(f.d)}</div></td>
+        <td class="num mono" style="width:54px;color:var(--ink-2)">${f.peso}%</td>
+        <td style="width:150px"><div class="bar"><div class="track"><div class="fill" style="width:${Math.round((cuenta[f.k]||0)/n*100)}%;background:${f.col}"></div></div><b>${cuenta[f.k]||0}</b></div></td>
       </tr>`).join("")}</tbody></table></div>
     </div>
     <div class="panel">
@@ -2526,6 +2586,112 @@ function planDesdeCarteraCritica(wbk){
 <script>
 /* ---------- interfaz de importación ---------- */
 let PLAN=null;
+/* ===================== GUÍAS POR PESTAÑA =====================
+   Cada vista tiene su explicación, en la barra izquierda. */
+const GUIAS = {
+ panel:{t:"Panel de control",
+  q:"La foto de la cartera completa en una pantalla: cuánta gente hay, cuántos terminaron, quién va atrasado y qué alerta hay que mirar hoy.",
+  p:[["Los recuadros de arriba","Personas en la cartera, cuántas terminaron, cuántas van en marcha y cuántas no han empezado. Si la cartera tiene fases, también el avance por fases."],
+     ["Cómo va cada persona","La barra de colores reparte a los beneficiarios por tramo de avance. Abajo, la tabla los ordena de menor a mayor avance: los que están peor salen primero, a propósito."],
+     ["Próximo paso","La primera etapa que todavía no está lista. Es lo que hay que hacer con esa persona."],
+     ["Antecedentes cargados","Qué porcentaje de los documentos del expediente ya está en la carpeta, y cuántos son de cuántos."],
+     ["Alertas","Se calculan solas: plazos, gente sin empezar, etapas donde se atascó la mayoría, documentos que faltan en casi todas las carpetas."]],
+  c:"Haz clic en cualquier nombre para abrir su ficha completa."},
+
+ proyectos:{t:"Proyectos y beneficiarios",
+  q:"La lista completa, ordenable por cualquier columna. Sirve para buscar a alguien puntual o para ordenar la cartera por el criterio que te interese.",
+  p:[["Ordenar","Haz clic en el título de una columna para ordenar por ella. Otro clic invierte el orden."],
+     ["Avance de etapas","Promedio de las etapas del proceso. Las marcadas «no corresponde» no cuentan."],
+     ["Antecedentes cargados","Lo mismo pero con los documentos de la carpeta."],
+     ["Abrir la ficha","Un clic en el nombre abre el detalle: todas las etapas, todos los documentos y de qué archivo salió cada dato."]],
+  c:""},
+
+ etapas:{t:"Matriz de etapas",
+  q:"Todas las personas contra todas las etapas, en una sola grilla. Sirve para ver de un vistazo dónde se atascó la cartera entera.",
+  p:[["Cómo leerla","Cada fila es una persona, cada columna una etapa. Verde es completa, amarillo parcial, gris no realizada, rojo con equis no corresponde."],
+     ["Columnas casi vacías","Si una columna está casi toda gris, esa etapa es el cuello de botella de la cartera."],
+     ["No corresponde","Esas casillas salen del cálculo del porcentaje. No cuentan ni a favor ni en contra."]],
+  c:""},
+
+ docs:{t:"Carpeta documental",
+  q:"El estado de los antecedentes de cada expediente: qué documento está, cuál falta y cuál no corresponde.",
+  p:[["Qué es un antecedente","Cada uno de los documentos que debe tener la carpeta: resoluciones, contratos, certificados, boletas."],
+     ["Cómo se marca","En el Avance Técnico se lee de las carpetas de OneDrive. En las demás carteras sale de las columnas de la planilla."],
+     ["No corresponde","Un documento que no aplica a ese beneficiario se descuenta del total, para que el porcentaje refleje lo que de verdad falta."]],
+  c:""},
+
+ avtec:{t:"Avance Técnico",
+  q:"La única cartera que no sale de una planilla: se lee directamente de las carpetas de OneDrive. Nadie marca casillas — el avance es lo que hay dentro de cada carpeta.",
+  p:[["De dónde sale cada persona","De la columna NOMBRE de la nómina de cartera crítica. Si agregas a alguien ahí, en la siguiente pasada el programa sale a buscar sus carpetas."],
+     ["Cómo se decide una etapa","Un archivo con el nombre del beneficiario o un documento tipo cuentan como completa. Solo archivos de otras personas, parcial. Carpeta vacía, no realizada."],
+     ["No corresponde","Deja dentro de la carpeta un archivo cuyo nombre diga «no corresponde» y esa etapa sale del cálculo del porcentaje."],
+     ["Las fases","Miden qué tan lejos llegó el expediente, no cuánto papeleo tiene. Cada fase vale un porcentaje fijo y suben en escalera; la tabla del panel las lista con su valor."],
+     ["El global","Promedia tres cosas: la fase, la documentación de obra y las carpetas del módulo."]],
+  c:"El programa solo lee nombres de archivo, tamaños y fechas. Nunca abre los documentos."},
+
+ avsoc:{t:"Avance Social",
+  q:"El itinerario de acompañamiento social: las doce actividades que se hacen con cada grupo MAVE y con cada beneficiario CSR individual.",
+  p:[["La fecha manda","Una actividad se da por realizada solo si tiene fecha anotada. Las hojas de registro traen filas preparadas aunque la actividad no se haya hecho, así que la fecha es la única prueba."],
+     ["Actividades sin fecha","Si una fila sin fecha tiene un gestor territorial a cargo, es que se hizo y faltó anotarla. Sale como alerta de calidad del registro, no como avance."],
+     ["Repetición de AT2 y Repaso","Son de contingencia: solo se hacen si el grupo las necesita. Salen como «no corresponde» y no castigan el porcentaje."],
+     ["Asistencia","Se promedia solo sobre los grupos MAVE. En los casos individuales siempre daría 100% — una persona de una — así que ahí se muestra a cuántas actividades asistió."],
+     ["Sin movimiento","Días desde la última actividad con fecha. Sobre 90 días salta la alerta."]],
+  c:""},
+
+ cartera:{t:"Cartera crítica",
+  q:"El detalle social, legal y económico de cada expediente de la cartera crítica: composición del hogar, dominio del terreno, superficies y el desglose del subsidio.",
+  p:[["De dónde sale","De la nómina de cartera crítica y de la planilla de expedientes, ambas en la carpeta compartida."],
+     ["Para qué sirve","Para revisar un caso a fondo sin abrir los Excel: ver de dónde viene el monto, qué partidas lo componen y qué antecedentes tiene el terreno."]],
+  c:"Esta pestaña no se publica en el link público."},
+
+ evaluacion:{t:"Evaluación previa",
+  q:"Las definiciones del encargo antes de empezar: plazo comprometido, modalidad, tipología de vivienda y quién responde por cada cosa.",
+  p:[["Para qué sirve","Es la referencia contra la que se mide todo lo demás. Si el plazo cambia, aquí se cambia."]],
+  c:""},
+
+ reportes:{t:"Reportes",
+  q:"Resúmenes listos para mostrar o imprimir: avance por comuna, por etapa y por responsable.",
+  p:[["Imprimir","El botón Imprimir de arriba deja la vista limpia, sin menús, lista para PDF."],
+     ["Descargar","Donde aparece «Descargar CSV» se puede bajar la tabla para abrirla en Excel."]],
+  c:""},
+
+ fuentes:{t:"Fuentes de datos",
+  q:"De qué archivo salió cada número, y cuáles se descartaron. Sirve para auditar el panel cuando algo no calza.",
+  p:[["Fuentes activas","Los archivos y carpetas que el programa lee hoy en cada pasada."],
+     ["Fuentes descartadas","Planillas que existen pero que ya no se usan, con el motivo. Están listadas para que nadie las vuelva a conectar por error."]],
+  c:""},
+
+ config:{t:"Configuración",
+  q:"Los parámetros del encargo: nombre, código, plazo y la definición de las etapas y los antecedentes.",
+  p:[],c:""}
+};
+function abrirGuia(){
+  const g = GUIAS[S.view] || {t:TITULOS[S.view]||"Guía", q:"Sin guía para esta vista.", p:[], c:""};
+  const m = $("#modal");
+  m.innerHTML = `
+   <header>
+     <div style="flex:1;min-width:0">
+       <div class="eyebrow">Guía de la pestaña</div>
+       <h3>${esc(g.t)}</h3>
+     </div>
+     <button class="x" onclick="cerrarModal()" aria-label="Cerrar">×</button>
+   </header>
+   <div class="mbody">
+     <p style="font-size:13.5px;line-height:1.55;margin:0">${esc(g.q)}</p>
+     ${g.p.length? `<div style="display:flex;flex-direction:column;gap:10px">${g.p.map(x=>`
+       <div style="border-left:2px solid var(--line-2);padding-left:11px">
+         <div style="font-weight:600;font-size:12.5px">${esc(x[0])}</div>
+         <div style="font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-top:2px">${esc(x[1])}</div>
+       </div>`).join("")}</div>`:""}
+     ${g.c? `<div class="alert ok" style="margin:0"><div class="ic">i</div><div><div class="d">${esc(g.c)}</div></div></div>`:""}
+     <div style="border-top:1px solid var(--line);padding-top:11px;font-size:12px;color:var(--ink-3);line-height:1.55">
+       <b style="color:var(--ink-2)">Cómo se actualiza todo esto:</b> un computador de la EGIS lee las carpetas y planillas de OneDrive cada 20 segundos, recalcula y publica. Esta página se refresca sola cada 2 minutos. El chip verde de arriba dice hace cuánto se leyeron los datos.
+     </div>
+   </div>
+   <footer><button class="btn pri" onclick="cerrarModal()">Entendido</button></footer>`;
+  m.classList.add("on"); m.setAttribute("aria-hidden","false"); $("#scrim2").classList.add("on");
+}
+
 function abrirImportador(){
   const m=$("#modal");
   m.innerHTML=`
@@ -2670,7 +2836,7 @@ async function exportarPlanilla(){
 /* ---------------- NAVEGACIÓN / ARRANQUE ---------------- */
 function ir(v){ S.view=v; syncNav(); render(); window.scrollTo({top:0}); }
 function syncNav(){ document.querySelectorAll(".navbtn").forEach(b=>b.classList.toggle("on", b.dataset.v===S.view)); }
-document.querySelectorAll(".navbtn").forEach(b=> b.addEventListener("click",()=>ir(b.dataset.v)));
+document.querySelectorAll(".navbtn[data-v]").forEach(b=> b.addEventListener("click",()=>ir(b.dataset.v)));
 $("#progSel").addEventListener("change",e=>{ S.progId=e.target.value; render(); });
 $("#scrim").addEventListener("click",cerrar);
 $("#scrim2").addEventListener("click",cerrarModal);
