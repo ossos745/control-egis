@@ -304,6 +304,10 @@ svg text{font-family:"Source Sans 3",sans-serif}
   table.cards td.tit{display:block;padding-bottom:6px;margin-bottom:4px;border-bottom:1px solid var(--line)}
   table.cards td.tit::before{display:none}
   table.cards .bar{justify-content:flex-end}
+  /* despliegue de personas por fase: a lo ancho, no en dos columnas */
+  table.cards tr.fase-det{border:0;background:transparent;padding:0;margin:-6px 0 9px}
+  table.cards tr.fase-det td{display:block;padding:0}
+  table.cards tr.fase-det td::before{display:none}
   /* ficha del proyecto: que las cuatro opciones de estado quepan en el ancho */
   .drawer .body{padding:12px}
   .drawer header{padding:12px 14px}
@@ -617,14 +621,53 @@ const TRAMOS=[
 ];
 function tramoDe(a){ return TRAMOS.find(t=>t.test(a)) || TRAMOS[4]; }
 
+/* Avance general por persona.
+   La fase pone el piso y lo que hay dentro de las carpetas mueve el resto.
+   Así alguien con solo el ensayo de absorción ya no marca 0, y quien termina
+   el módulo llega a 100. */
+const ESCALERA={
+ "Sin iniciar":             [0,    0   ],
+ "Con ensayo de absorción": [0.05, 0.05],
+ "Ingresado en obra":       [0.10, 0.30],
+ "Módulo abierto":          [0.30, 0.96],
+ "En obra y en módulo":     [0.35, 0.96],
+ "Módulo completo":         [1,    1   ]
+};
+function avanceGeneral(p,pg){
+  const a = p && p.at;
+  if(!a || !a.fase || !(a.fase in ESCALERA)) return avEtapas(p,pg);
+  const [lo,hi] = ESCALERA[a.fase];
+  if(hi<=lo) return lo;
+  const dentro = a.modulo && a.modulo.ingresado ? (a.modulo.pct||0)/100
+               : (a.obra && a.obra.ingresado ? (a.obra.pct||0)/100 : 0);
+  return Math.min(hi, lo + (hi-lo)*dentro);
+}
+function detalleAvance(p,pg){
+  const a = p && p.at;
+  if(!a || !a.fase || !(a.fase in ESCALERA)) return "";
+  if(a.modulo && a.modulo.ingresado) return a.fase+" · módulo "+a.modulo.pct+"%";
+  if(a.obra && a.obra.ingresado)     return a.fase+" · obra "+a.obra.pct+"%";
+  return a.fase;
+}
+function toggleFase(k){ S.faseAbierta = (S.faseAbierta===k? null : k); render(); }
+function personasEnFase(ps,k){ return ps.filter(p=>faseDe(p)===k); }
+function filaFaseAbierta(ps,k,cols){
+  if(S.faseAbierta!==k) return "";
+  const gente = personasEnFase(ps,k);
+  return `<tr class="fase-det"><td colspan="${cols}" style="background:var(--surface-2);padding:10px 12px">
+    ${gente.length? `<div style="font-size:11px;color:var(--ink-3);margin-bottom:7px">${gente.length} ${gente.length===1?"persona está":"personas están"} en esta fase</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${gente.map(p=>`<button class="tag" style="cursor:pointer;border:1px solid var(--line-2);white-space:normal;text-align:left;max-width:100%" onclick="event.stopPropagation();abrir('${esc(p.id)}')">${esc(p.postulante)}</button>`).join("")}</div>`
+     : '<div style="font-size:12px;color:var(--ink-3)">Nadie está en esta fase en este momento.</div>'}
+  </td></tr>`;
+}
 function vPanel(pg){
   const ps=proyectos(), n=ps.length;
   if(!n) return '<div class="panel"><div class="empty">Esta cartera todavía no tiene beneficiarios cargados.</div></div>';
-  const avg = ps.reduce((s,p)=>s+avEtapas(p,pg),0)/n;
+  const avg = ps.reduce((s,p)=>s+avanceGeneral(p,pg),0)/n;
   const avgD = ps.reduce((s,p)=>s+avDocs(p,pg),0)/n;
   const d = diasPlazo(pg);
 
-  const conAv = ps.map(p=>({p, a:avEtapas(p,pg), dd:avDocs(p,pg)}));
+  const conAv = ps.map(p=>({p, a:avanceGeneral(p,pg), dd:avDocs(p,pg), det:detalleAvance(p,pg)}));
   const cuenta={}; TRAMOS.forEach(t=>cuenta[t.k]=0);
   conAv.forEach(x=>cuenta[tramoDe(x.a).k]++);
   const comp=cuenta.fin, cero=cuenta.cero, marcha=n-comp-cero;
@@ -679,35 +722,14 @@ function vPanel(pg){
     <div class="stat"><div class="k">Sin empezar</div><div class="v" style="color:${cero?"var(--crit)":"var(--ink)"}">${cero}</div>
       <div class="meter"><i style="width:${Math.round(cero/n*100)}%;background:var(--crit)"></i></div>
       <div class="m">Ninguna etapa registrada</div></div>
-    ${hayFases?`<div class="stat"><div class="k">Avance por fases</div><div class="v" style="color:${tonoPct(pFase)}">${pFase}<small>%</small></div>
-      <div class="meter"><i style="width:${pFase}%;background:${tonoPct(pFase)}"></i></div>
-      <div class="m">qué tan lejos llegó el expediente, en promedio</div></div>`:""}
+    <div class="stat"><div class="k">Avance general</div><div class="v" style="color:${tonoPct(pct(avg))}">${pct(avg)}<small>%</small></div>
+      <div class="meter"><i style="width:${pct(avg)}%;background:${tonoPct(pct(avg))}"></i></div>
+      <div class="m">promedio de toda la cartera</div></div>
     <div class="stat"><div class="k">Plazo comprometido</div><div class="v">${d===null?"—":(d<0?"−"+Math.abs(d):d)}<small>${d===null?"":" días"}</small></div>
       <div class="m">${pg.plazo? fmtDate(pg.plazo) : "Sin definir"}</div></div>
   </div>
 
-  ${hayFases?`<div class="panel" style="margin-bottom:14px">
-    <header><h3>¿Hasta dónde llegó cada expediente?</h3><span class="hint">${conFase} beneficiarios repartidos en las seis fases</span></header>
-    <div class="pad" style="padding-bottom:10px">
-      <div style="display:flex;height:26px;border-radius:5px;overflow:hidden;border:1px solid var(--line)">
-        ${FASES_DEF.filter(x=>cFase[x.k]).map(x=>`<div title="${esc(x.k)}: ${cFase[x.k]}" style="width:${cFase[x.k]/conFase*100}%;background:${x.col};display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">${cFase[x.k]/conFase>=.07?cFase[x.k]:""}</div>`).join("")}
-      </div>
-    </div>
-    <div class="pad" style="padding-top:0;padding-bottom:6px;font-size:12px;color:var(--ink-2);line-height:1.5">
-      Cada persona está en <b>una sola</b> fase: la más alta que alcanzó. Llegar a una fase vale
-      los puntos de la tercera columna, y el promedio de todos da el <b>avance por fases: ${pFase}%</b>.
-    </div>
-    <div class="scroll"><table class="cards"><thead><tr><th style="min-width:200px">Fase del expediente</th>
-      <th class="num" style="width:120px">Personas hoy<br>en esta fase</th>
-      <th class="num" style="width:110px">Si llega aquí,<br>vale</th>
-      <th style="min-width:230px">Qué significa</th></tr></thead>
-      <tbody>${FASES_DEF.map(x=>`<tr>
-        <td data-l="" class="tit"><span class="tag"><i class="dot" style="background:${x.col}"></i>${esc(x.k)}</span></td>
-        <td data-l="Personas hoy en esta fase" class="num mono"><b>${cFase[x.k]||0}</b><small style="color:var(--ink-3)"> de ${conFase}</small></td>
-        <td data-l="Si llega aquí, vale" class="num mono" style="color:var(--ink-2)">${x.peso}<small style="color:var(--ink-3)"> pts de 100</small></td>
-        <td data-l="Qué significa" style="font-size:12px;color:var(--ink-3)">${esc(x.d)}</td>
-      </tr>`).join("")}</tbody></table></div>
-  </div>`:""}
+
 
   <div class="panel" style="margin-bottom:14px">
     <header><h3>Cómo va cada persona</h3><span class="hint">${n} beneficiarios · de menor a mayor avance</span><span class="spacer"></span>
@@ -732,7 +754,8 @@ function vPanel(pg){
           ${hayGrupo?`<td data-l="Grupo" style="color:var(--ink-2)">${esc(x.p.grupo||"—")}</td>`:""}
           <td class="num mono" data-l="Etapas listas" style="color:var(--ink-2)"><span>${ea.listas}<span style="color:var(--ink-3)">/${ea.tot}</span></span></td>
           <td data-l="Próximo paso"><span class="tag"><i class="dot" style="background:${t.col}"></i>${x.a>=1?"Proceso terminado":esc(ea.nombre)}</span></td>
-          <td data-l="Avance">${barra(x.a)}</td>
+          <td data-l="Avance">${barra(x.a)}
+            ${x.det?`<div style="font-size:10.5px;color:var(--ink-3);text-align:right">${esc(x.det)}</div>`:""}</td>
           <td class="num" data-l="Antecedentes cargados" style="color:var(--ink-2)">${pct(x.dd)}%
             <div style="font-size:10.5px;color:var(--ink-3)">${docsDe(x.p,pg)}</div></td>
           ${hayEstado?`<td data-l="Estado">${chipEstado(x.p.estado)}</td>`:""}
@@ -740,6 +763,26 @@ function vPanel(pg){
         </tr>`;}).join("")}</tbody>
     </table></div>
   </div>
+
+  ${hayFases?`<div class="panel" style="margin-bottom:14px">
+    <header><h3>¿Hasta dónde llegó cada expediente?</h3><span class="hint">${conFase} beneficiarios repartidos en las seis fases · haz clic en una fase para ver quiénes están</span></header>
+    <div class="pad" style="padding-bottom:10px">
+      <div style="display:flex;height:26px;border-radius:5px;overflow:hidden;border:1px solid var(--line)">
+        ${FASES_DEF.filter(x=>cFase[x.k]).map(x=>`<div title="${esc(x.k)}: ${cFase[x.k]}" style="width:${cFase[x.k]/conFase*100}%;background:${x.col};display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">${cFase[x.k]/conFase>=.07?cFase[x.k]:""}</div>`).join("")}
+      </div>
+    </div>
+    <div class="scroll"><table class="cards"><thead><tr><th style="min-width:210px">Fase del expediente</th>
+      <th class="num" style="width:96px">Personas</th>
+      <th class="num" style="width:124px">% de la cartera</th>
+      <th style="min-width:230px">Qué significa</th></tr></thead>
+      <tbody>${FASES_DEF.map(x=>{const c=cFase[x.k]||0, pc=conFase?Math.round(c/conFase*100):0, ab=S.faseAbierta===x.k; return `<tr onclick="toggleFase('${esc(x.k)}')" style="cursor:pointer;${ab?"background:var(--surface-2)":""}">
+        <td data-l="" class="tit"><span class="tag"><i class="dot" style="background:${x.col}"></i>${esc(x.k)}</span>
+          <span style="color:var(--ink-3);font-size:11px;margin-left:5px">${ab?"▾":"▸"}</span></td>
+        <td data-l="Personas" class="num mono"><b>${c}</b><small style="color:var(--ink-3)"> de ${conFase}</small></td>
+        <td data-l="% de la cartera"><div class="bar"><div class="track"><div class="fill" style="width:${pc}%;background:${x.col}"></div></div><b style="width:38px">${pc}%</b></div></td>
+        <td data-l="Qué significa" style="font-size:12px;color:var(--ink-3)">${esc(x.d)}</td>
+      </tr>`+filaFaseAbierta(ps,x.k,4);}).join("")}</tbody></table></div>
+  </div>`:""}
 
   <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start">
     <div style="display:flex;flex-direction:column;gap:14px">
@@ -773,7 +816,7 @@ function vPanel(pg){
 }
 
 function filaMini(p,pg){
-  const a=avEtapas(p,pg), dd=avDocs(p,pg);
+  const a=avanceGeneral(p,pg), dd=avDocs(p,pg);
   return `<tr><td class="mono" style="color:var(--ink-3)">${p.numero||"—"}</td>
     <td><button class="rowbtn" onclick="abrir('${esc(p.id)}')">${esc(p.postulante)}</button></td>
     <td>${esc(p.comuna)}</td>
@@ -812,7 +855,7 @@ function dibujarGraficos(pg){
   const g=agrupaComunas(ps,pg);
   const datos=Object.keys(g).sort().map((k,i)=>({
     lab:k, n:g[k].length,
-    av:g[k].reduce((s,p)=>s+avEtapas(p,pg),0)/g[k].length,
+    av:g[k].reduce((s,p)=>s+avanceGeneral(p,pg),0)/g[k].length,
     doc:g[k].reduce((s,p)=>s+avDocs(p,pg),0)/g[k].length,
     color:"var("+SERIES[i%SERIES.length]+")"
   })).sort((a,b)=>b.av-a.av);
@@ -875,7 +918,7 @@ function vProyectos(pg){
     if(f.edec && p.estado!==f.edec) return false;
     if(f.grupo && p.grupo!==f.grupo) return false;
     if(f.estado){
-      const a=avEtapas(p,pg);
+      const a=avanceGeneral(p,pg);
       if(f.estado==="completo" && a<1) return false;
       if(f.estado==="proceso" && !(a>0&&a<1)) return false;
       if(f.estado==="sin" && a>0) return false;
@@ -888,7 +931,7 @@ function vProyectos(pg){
   const k=S.sort.k, dir=S.sort.dir;
   ps.sort((a,b)=>{
     let x,y;
-    if(k==="avance"){x=avEtapas(a,pg);y=avEtapas(b,pg);}
+    if(k==="avance"){x=avanceGeneral(a,pg);y=avanceGeneral(b,pg);}
     else if(k==="docs"){x=avDocs(a,pg);y=avDocs(b,pg);}
     else if(k==="numero"){x=a.numero||0;y=b.numero||0;}
     else {x=String(a[k]||"").toLowerCase();y=String(b[k]||"").toLowerCase();}
@@ -917,9 +960,9 @@ function vProyectos(pg){
   <div class="panel">
     <header><h3>${ps.length} de ${all.length} proyectos</h3><span class="hint">Haz clic en un postulante para abrir su ficha</span></header>
     <div class="scroll"><table>
-      <thead><tr>${th("numero","N°")}${th("codigo","Código")}${th("postulante","Postulante")}${th("comuna","Comuna")}${th("grupo","Grupo")}${th("estado","Estado declarado")}${th("avance","Avance de etapas")}${th("docs","Antecedentes cargados")}${th("responsable","Responsable")}<th>Últ. actualización</th></tr></thead>
+      <thead><tr>${th("numero","N°")}${th("codigo","Código")}${th("postulante","Postulante")}${th("comuna","Comuna")}${th("grupo","Grupo")}${th("estado","Estado declarado")}${th("avance","Avance del proceso")}${th("docs","Antecedentes cargados")}${th("responsable","Responsable")}<th>Últ. actualización</th></tr></thead>
       <tbody>${ps.map(p=>{
-        const a=avEtapas(p,pg), et=(pg.etapas||[]);
+        const a=avanceGeneral(p,pg), et=(pg.etapas||[]);
         const done=et.filter(e=>(((p.etapas||{})[e.id]||{}).estado)==="completa").length;
         const nna=et.filter(e=>(((p.etapas||{})[e.id]||{}).estado)==="na").length;
         return `<tr><td class="mono" style="color:var(--ink-3)">${p.numero||"—"}</td>
@@ -955,7 +998,7 @@ function vEtapas(pg){
         <span><i style="background:color-mix(in srgb,var(--crit) 16%,transparent);border-color:var(--crit)"></i>No corresponde</span>
       </div></header>
     <div class="scroll"><table class="matrix">
-      <thead><tr><th class="name">Proyecto</th>${et.map(e=>`<th class="rot"><span>${esc(e.nombre)}</span></th>`).join("")}<th style="min-width:74px">Avance</th></tr></thead>
+      <thead><tr><th class="name">Proyecto</th>${et.map(e=>`<th class="rot"><span>${esc(e.nombre)}</span></th>`).join("")}<th style="min-width:74px">Avance<br>de etapas</th></tr></thead>
       <tbody>${ps.map(p=>{
         const a=avEtapas(p,pg);
         return `<tr><td class="name"><button class="rowbtn" onclick="abrir('${esc(p.id)}')">${esc(p.postulante)}</button>
@@ -1031,7 +1074,7 @@ function toggleBloque(pid,bid){ return;
 /* ---------------- REPORTES ---------------- */
 function vReportes(pg){
   const ps=proyectos(), n=ps.length, et=pg.etapas||[], bl=pg.bloques||[];
-  const avg = n? ps.reduce((s,p)=>s+avEtapas(p,pg),0)/n : 0;
+  const avg = n? ps.reduce((s,p)=>s+avanceGeneral(p,pg),0)/n : 0;
   const avgD = n? ps.reduce((s,p)=>s+avDocs(p,pg),0)/n : 0;
   const d=diasPlazo(pg);
   const g=agrupaComunas(ps,pg);
@@ -1045,10 +1088,10 @@ function vReportes(pg){
   const filasComuna = Object.keys(g).sort().map(k=>{
     const l=g[k];
     return {com:k,n:l.length,
-      av:l.reduce((s,p)=>s+avEtapas(p,pg),0)/l.length,
+      av:l.reduce((s,p)=>s+avanceGeneral(p,pg),0)/l.length,
       doc:l.reduce((s,p)=>s+avDocs(p,pg),0)/l.length,
-      comp:l.filter(p=>avEtapas(p,pg)>=1).length,
-      cri:l.filter(p=>avEtapas(p,pg)<.34).length};
+      comp:l.filter(p=>avanceGeneral(p,pg)>=1).length,
+      cri:l.filter(p=>avanceGeneral(p,pg)<.34).length};
   }).sort((a,b)=>b.av-a.av);
 
   return `
@@ -1066,17 +1109,17 @@ function vReportes(pg){
     <div class="pad">
       <p style="margin:0 0 10px;max-width:68ch;font-size:14.5px;line-height:1.62">
         El conjunto registra un <b>${pct(avg)}% de avance en etapas</b> y un <b>${pct(avgD)}% de completitud documental</b>.
-        ${ps.filter(p=>avEtapas(p,pg)>=1).length} de ${n} proyectos están cerrados,
-        ${ps.filter(p=>avEtapas(p,pg)>0&&avEtapas(p,pg)<1).length} están en desarrollo y
-        ${ps.filter(p=>avEtapas(p,pg)===0).length} no han iniciado ninguna etapa.
+        ${ps.filter(p=>avanceGeneral(p,pg)>=1).length} de ${n} proyectos están cerrados,
+        ${ps.filter(p=>avanceGeneral(p,pg)>0&&avanceGeneral(p,pg)<1).length} están en desarrollo y
+        ${ps.filter(p=>avanceGeneral(p,pg)===0).length} no han iniciado ninguna etapa.
         ${d===null?"El plazo comprometido aún no está definido.":(d<0?"<b style='color:var(--crit)'>El plazo comprometido está vencido hace "+Math.abs(d)+" días.</b>":"Quedan <b>"+d+" días</b> para el plazo comprometido.")}
         ${filasEtapa.length?"La etapa más rezagada es <b>"+esc(filasEtapa[0].e.nombre)+"</b> ("+pct(filasEtapa[0].av)+"%).":""}
       </p>
       <div class="stats" style="border-radius:6px">
         <div class="stat"><div class="k">Avance etapas</div><div class="v">${pct(avg)}<small>%</small></div></div>
         <div class="stat"><div class="k">Completitud documental</div><div class="v">${pct(avgD)}<small>%</small></div></div>
-        <div class="stat"><div class="k">Proyectos cerrados</div><div class="v">${ps.filter(p=>avEtapas(p,pg)>=1).length}<small>/${n}</small></div></div>
-        <div class="stat"><div class="k">Bajo 34%</div><div class="v" style="color:var(--crit)">${ps.filter(p=>avEtapas(p,pg)<.34).length}</div></div>
+        <div class="stat"><div class="k">Proyectos cerrados</div><div class="v">${ps.filter(p=>avanceGeneral(p,pg)>=1).length}<small>/${n}</small></div></div>
+        <div class="stat"><div class="k">Bajo 34%</div><div class="v" style="color:var(--crit)">${ps.filter(p=>avanceGeneral(p,pg)<.34).length}</div></div>
       </div>
     </div>
   </div>
@@ -1128,8 +1171,8 @@ function vReportes(pg){
     <header><h3>4 · Alertas y plazos</h3></header>
     <div class="scroll"><table>
       <thead><tr><th style="min-width:200px">Postulante</th><th>Comuna</th><th style="width:130px">Avance</th><th>Estado declarado</th><th>Responsable</th><th>Etapas pendientes</th><th style="width:120px">Riesgo</th></tr></thead>
-      <tbody>${ps.slice().sort((a,b)=>avEtapas(a,pg)-avEtapas(b,pg)).map(p=>{
-        const a=avEtapas(p,pg);
+      <tbody>${ps.slice().sort((a,b)=>avanceGeneral(a,pg)-avanceGeneral(b,pg)).map(p=>{
+        const a=avanceGeneral(p,pg);
         const pend=et.filter(e=>(((p.etapas||{})[e.id]||{}).estado||"no")!=="completa").length;
         const r = a>=1?["ok","Cerrado","var(--good)"] : (d!==null&&d<45&&a<.5)?["cr","Crítico","var(--crit)"] : a<.34?["cr","Crítico","var(--crit)"] : a<.7?["wa","Atención","var(--warn)"]:["ok","En curso","var(--s3)"];
         return `<tr><td><button class="rowbtn" onclick="abrir('${esc(p.id)}')">${esc(p.postulante)}</button></td>
@@ -1172,12 +1215,12 @@ function dibujarGraficosReporte(pg){
 }
 function copiarResumen(){
   const pg=prog(), ps=proyectos(), n=ps.length;
-  const avg=n?ps.reduce((s,p)=>s+avEtapas(p,pg),0)/n:0, avgD=n?ps.reduce((s,p)=>s+avDocs(p,pg),0)/n:0;
+  const avg=n?ps.reduce((s,p)=>s+avanceGeneral(p,pg),0)/n:0, avgD=n?ps.reduce((s,p)=>s+avDocs(p,pg),0)/n:0;
   const d=diasPlazo(pg);
   const t=[pg.nombre,
     "Corte al "+new Date().toLocaleDateString("es-CL"),
     "Avance de etapas: "+pct(avg)+"%  |  Completitud documental: "+pct(avgD)+"%",
-    "Proyectos: "+n+" ("+ps.filter(p=>avEtapas(p,pg)>=1).length+" cerrados, "+ps.filter(p=>avEtapas(p,pg)<.34).length+" bajo 34%)",
+    "Proyectos: "+n+" ("+ps.filter(p=>avanceGeneral(p,pg)>=1).length+" cerrados, "+ps.filter(p=>avanceGeneral(p,pg)<.34).length+" bajo 34%)",
     d===null? "Plazo sin definir" : (d<0? "Plazo vencido hace "+Math.abs(d)+" días" : "Quedan "+d+" días para el plazo comprometido")].join("\n");
   navigator.clipboard.writeText(t).then(()=>{const el=$("#syncState");el.textContent="Resumen copiado al portapapeles";setTimeout(estadoSync,3000);},
     ()=>aviso("El navegador no permitió copiar."));
@@ -1199,7 +1242,7 @@ function exportarCSV(){
   const pg=prog(), ps=proyectos(), et=pg.etapas||[], bl=pg.bloques||[];
   const head=["N°","Código","Grupo","Comuna","Localidad","Postulante","RUT","Rol","Contratista","Estado declarado","Motivo","Responsable","Avance etapas %","Completitud docs %"]
     .concat(et.map(e=>"E: "+e.nombre)).concat(bl.map(b=>"D: "+b.nombre)).concat(["Observaciones","Última actualización"]);
-  const rows=ps.map(p=>[p.numero,p.codigo,p.grupo,p.comuna,p.localidad,p.postulante,p.rut,p.rol,p.contratista,p.estado,p.motivo,p.responsable,pct(avEtapas(p,pg)),pct(avDocs(p,pg))]
+  const rows=ps.map(p=>[p.numero,p.codigo,p.grupo,p.comuna,p.localidad,p.postulante,p.rut,p.rol,p.contratista,p.estado,p.motivo,p.responsable,pct(avanceGeneral(p,pg)),pct(avDocs(p,pg))]
     .concat(et.map(e=>EST[((p.etapas||{})[e.id]||{}).estado||"no"].lab))
     .concat(bl.map(b=>((p.bloques||{})[b.id]||{}).cargado?"Cargado":"Pendiente"))
     .concat([p.obs||"", p.updatedAt? new Date(p.updatedAt).toLocaleString("es-CL"):""]));
@@ -1234,8 +1277,8 @@ function pintarDrawer(){
    </header>
    <div class="body">
      <div class="stats">
-       <div class="stat"><div class="k">Avance de etapas</div><div class="v">${pct(avEtapas(p,pg))}<small>%</small></div>
-         <div class="meter"><i style="width:${pct(avEtapas(p,pg))}%;background:${colorAvance(avEtapas(p,pg))}"></i></div></div>
+       <div class="stat"><div class="k">Avance de etapas</div><div class="v">${pct(avanceGeneral(p,pg))}<small>%</small></div>
+         <div class="meter"><i style="width:${pct(avanceGeneral(p,pg))}%;background:${colorAvance(avanceGeneral(p,pg))}"></i></div></div>
        <div class="stat"><div class="k">Carpeta documental</div><div class="v">${pct(avDocs(p,pg))}<small>%</small></div>
          <div class="meter"><i style="width:${pct(avDocs(p,pg))}%;background:var(--s1)"></i></div></div>
      </div>
@@ -1580,8 +1623,8 @@ function vAvanceTecnico(pg){
   const enMod=ps.filter(p=>p.at.modulo.ingresado).length;
   const pObra=Math.round(ps.reduce((s,p)=>s+p.at.obra.pct,0)/n);
   const pMod=Math.round(ps.reduce((s,p)=>s+p.at.modulo.pct,0)/n);
-  const pFase=avanceFases(ps)||0;
-  const global=Math.round((pObra+pMod+pFase)/3);
+  const pGen=Math.round(ps.reduce((s,p)=>s+avanceGeneral(p,pg),0)/n*100);
+  const global=pGen;
   const enUltima=ps.filter(p=>faseDe(p)===FASES[FASES.length-1]).length;
   const conAbs=ps.filter(p=>p.at.absorcion).length;
   const ajenos=ps.reduce((s,p)=>s+(p.at.modulo.ajenos||0),0);
@@ -1591,7 +1634,7 @@ function vAvanceTecnico(pg){
   const arch=ps.reduce((s,p)=>s+(p.at.modulo.archivos||0),0);
   const dias=ps.map(p=>p.at.modulo.diasSinMovimiento).filter(v=>v!=null);
   const corte=(ps[0].at.actualizado||"").replace("T"," ");
-  const orden=ps.slice().sort((a,b)=>(b.at.obra.pct+b.at.modulo.pct)-(a.at.obra.pct+a.at.modulo.pct));
+  const orden=ps.slice().sort((a,b)=>avanceGeneral(b,pg)-avanceGeneral(a,pg));
 
   // embudo
   const cuenta={}; FASES.forEach(f=>cuenta[f]=0);
@@ -1682,10 +1725,10 @@ function vAvanceTecnico(pg){
   <div class="stats" style="margin-bottom:14px">
     <div class="stat"><div class="k">Avance técnico global</div><div class="v" style="color:${tonoPct(global)}">${global}<small>%</small></div>
       <div class="meter"><i style="width:${global}%;background:${tonoPct(global)}"></i></div>
-      <div class="m">promedio de fase, obra y módulo</div></div>
-    <div class="stat"><div class="k">Avance por fases</div><div class="v" style="color:${tonoPct(pFase)}">${pFase}<small>%</small></div>
-      <div class="meter"><i style="width:${pFase}%;background:${tonoPct(pFase)}"></i></div>
-      <div class="m">${enUltima} de ${n} llegó a «${esc(FASES[FASES.length-1])}»</div></div>
+      <div class="m">la fase pone el piso y los documentos suben el resto</div></div>
+    <div class="stat"><div class="k">Expedientes terminados</div><div class="v" style="color:${enUltima?"var(--good)":"var(--ink)"}">${enUltima}<small>/${n}</small></div>
+      <div class="meter"><i style="width:${Math.round(enUltima/n*100)}%;background:var(--good)"></i></div>
+      <div class="m">llegaron a «${esc(FASES[FASES.length-1])}»</div></div>
     <div class="stat"><div class="k">Ingresados en obra</div><div class="v">${enObra}<small>/${n}</small></div>
       <div class="meter"><i style="width:${enObra/n*100}%;background:${tonoPct(enObra/n*100)}"></i></div>
       <div class="m">avance documental ${pObra}%</div></div>
@@ -1701,22 +1744,22 @@ function vAvanceTecnico(pg){
   <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);align-items:start;margin-bottom:14px">
     <div class="panel">
       <header><h3>¿Hasta dónde llegó cada expediente?</h3>
-        <span class="hint">las seis fases van en escalera, de la más atrasada a la más avanzada</span></header>
+        <span class="hint">haz clic en una fase para ver quiénes están en ella</span></header>
       <div class="pad" style="padding-bottom:6px;font-size:12px;color:var(--ink-2);line-height:1.5">
-        Cada persona está en <b>una sola</b> fase: la más alta que alcanzó. Llegar a una fase
-        vale los puntos de la columna del medio, y el promedio de todos da el
-        <b>avance por fases de la cartera: ${pFase}%</b>.
+        Cada persona está en <b>una sola</b> fase: la más alta que alcanzó, de la más atrasada
+        a la más avanzada.
       </div>
       <div class="scroll"><table class="cards">
         <thead><tr><th style="min-width:230px">Fase del expediente</th>
-          <th class="num" style="width:118px">Si llega aquí,<br>vale</th>
-          <th style="width:185px">Cuántas personas<br>están hoy en ella</th></tr></thead>
-        <tbody>${FASES_DEF.map(f=>{const c=cuenta[f.k]||0; return `<tr>
+          <th class="num" style="width:92px">Personas</th>
+          <th class="num" style="width:120px">% de la cartera</th></tr></thead>
+        <tbody>${FASES_DEF.map(f=>{const c=cuenta[f.k]||0, pc=n?Math.round(c/n*100):0, ab=S.faseAbierta===f.k; return `<tr onclick="toggleFase('${esc(f.k)}')" style="cursor:pointer;${ab?"background:var(--surface-2)":""}">
         <td data-l="" class="tit" style="font-size:12.5px">${chipFase(f.k)}
+          <span style="color:var(--ink-3);font-size:11px;margin-left:5px">${ab?"▾":"▸"}</span>
           <div style="font-size:10.5px;color:var(--ink-3);margin-top:2px">${esc(f.d)}</div></td>
-        <td data-l="Si llega aquí, vale" class="num mono" style="color:var(--ink-2)">${f.peso}<small style="color:var(--ink-3)"> pts de 100</small></td>
-        <td data-l="Personas hoy en ella"><div class="bar"><div class="track"><div class="fill" style="width:${Math.round(c/n*100)}%;background:${f.col}"></div></div><b style="width:72px">${c} de ${n}</b></div></td>
-      </tr>`;}).join("")}</tbody></table></div>
+        <td data-l="Personas" class="num mono"><b>${c}</b><small style="color:var(--ink-3)"> de ${n}</small></td>
+        <td data-l="% de la cartera"><div class="bar"><div class="track"><div class="fill" style="width:${pc}%;background:${f.col}"></div></div><b style="width:38px">${pc}%</b></div></td>
+      </tr>`+filaFaseAbierta(ps,f.k,3);}).join("")}</tbody></table></div>
     </div>
     <div class="panel">
       <header><h3>Alertas</h3><span class="hint">${alertas.length} activa${alertas.length===1?"":"s"}</span></header>
@@ -2609,7 +2652,8 @@ const GUIAS = {
  panel:{t:"Panel de control",
   q:"La foto de la cartera completa en una pantalla: cuánta gente hay, cuántos terminaron, quién va atrasado y qué alerta hay que mirar hoy.",
   p:[["Los recuadros de arriba","Personas en la cartera, cuántas terminaron, cuántas van en marcha y cuántas no han empezado. Si la cartera tiene fases, también el avance por fases."],
-     ["Las fases","Cada persona está en una sola fase: la más alta que alcanzó. Llegar a una vale puntos sobre 100, y el promedio de todos es el avance por fases. Los puntos de una fila no son cuánta gente hay ahí — eso va en la columna de al lado."],
+     ["Las fases","Cada persona está en una sola fase: la más alta que alcanzó. La tabla muestra cuántas personas hay en cada una y qué porcentaje de la cartera representan; al hacer clic en una fase se despliegan los nombres."],
+     ["Avance del proceso","No es solo el conteo de etapas: la fase alcanzada pone un piso y los documentos cargados suben el resto. Por eso alguien que ya tiene el ensayo de absorción no marca 0."],
      ["Cómo va cada persona","La barra de colores reparte a los beneficiarios por tramo de avance. Abajo, la tabla los ordena de menor a mayor avance: los que están peor salen primero, a propósito."],
      ["Próximo paso","La primera etapa que todavía no está lista. Es lo que hay que hacer con esa persona."],
      ["Antecedentes cargados","Qué porcentaje de los documentos del expediente ya está en la carpeta, y cuántos son de cuántos."],
@@ -2643,9 +2687,8 @@ const GUIAS = {
   p:[["De dónde sale cada persona","De la columna NOMBRE de la nómina de cartera crítica. Si agregas a alguien ahí, en la siguiente pasada el programa sale a buscar sus carpetas."],
      ["Cómo se decide una etapa","Un archivo con el nombre del beneficiario o un documento tipo cuentan como completa. Solo archivos de otras personas, parcial. Carpeta vacía, no realizada."],
      ["No corresponde","Deja dentro de la carpeta un archivo cuyo nombre diga «no corresponde» y esa etapa sale del cálculo del porcentaje."],
-     ["Las fases","Miden hasta dónde llegó el expediente, no cuánto papeleo tiene. Van en escalera y cada persona está en una sola: la más alta que alcanzó."],
-     ["Los puntos de cada fase","Llegar a una fase vale una cantidad fija de puntos sobre 100 — 30 al abrir carpeta de obra, 80 al tener las dos carpetas. Ese número NO es el porcentaje de gente que está ahí: la cantidad de personas va en su propia columna, al lado."],
-     ["Avance por fases","El promedio de los puntos de todos. Dice qué tan lejos llegó la cartera como conjunto."],
+     ["Las fases","Miden hasta dónde llegó el expediente. Van en escalera y cada persona está en una sola: la más alta que alcanzó. Haz clic en una fase para ver quiénes están en ella."],
+     ["El avance de cada persona","La fase pone el piso y los documentos suben el resto. Solo el ensayo de absorción ya vale 5%; abrir carpeta de obra parte en 10%; con el módulo abierto va de 30% para arriba según cuántas carpetas tengan documento, y al completarlo llega a 100%."],
      ["El global","Promedia tres cosas: la fase, la documentación de obra y las carpetas del módulo."]],
   c:"El programa solo lee nombres de archivo, tamaños y fechas. Nunca abre los documentos."},
 
