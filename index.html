@@ -76,6 +76,14 @@ nav{padding:10px 8px;display:flex;flex-direction:column;gap:1px}
 .railfoot{margin-top:auto;padding:12px;border-top:1px solid var(--line);font-size:11px;color:var(--ink-3);display:flex;flex-direction:column;gap:7px}
 .main{min-width:0;display:flex;flex-direction:column}
 
+#anioBox.on{border-color:var(--accent);background:var(--accent-soft)}
+.mot{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;margin:1px 3px 1px 0;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2)}
+.mot i{width:6px;height:6px;border-radius:50%;flex:none}
+.critrow{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);cursor:pointer}
+.critrow input{margin:3px 0 0;accent-color:var(--accent);flex:none}
+.critrow .t{font-size:13px;font-weight:600}
+.critrow .d{font-size:11.5px;color:var(--ink-3);line-height:1.4}
+
 /* ---------- topbar ---------- */
 .top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:11px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .top h2{font-size:16px;font-weight:600}
@@ -363,6 +371,8 @@ svg text{font-family:"Source Sans 3",sans-serif}
     <div class="top">
       <h2 id="viewTitle">Panel de control</h2>
       <div class="progsel"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="var(--ink-3)" stroke-width="1.6"><path d="M1.8 4.5h12.4v8.7H1.8z"/><path d="M1.8 4.5L3.4 2.4h9.2l1.6 2.1"/></svg><select id="progSel"></select></div>
+      <div class="progsel" id="anioBox" title="Período: muestra a las personas con tareas hechas, programadas o pendientes en ese año"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="var(--ink-3)" stroke-width="1.6"><rect x="1.8" y="3" width="12.4" height="11" rx="1.5"/><path d="M1.8 6.6h12.4M5 1.6v2.8M11 1.6v2.8"/></svg><select id="anioSel" aria-label="Período"></select></div>
+      <button class="btn sm noprint" id="revFiltroBtn" onclick="abrirRevisarFiltro()">Revisar filtro</button>
       <div class="spacer"></div>
       <span class="chip" id="plazoChip"></span>
       <span class="chip" id="frescoChip" title=""></span>
@@ -401,7 +411,81 @@ const S = {db:null, dl:null, ultima:null, recargando:false, progs:[], proys:[], 
 
 /* ---------- cálculo ---------- */
 function prog(){ return S.progs.find(p=>p.id===S.progId) || S.progs[0] || null; }
-function proyectos(){ return S.proys.filter(p=>p.programaId===S.progId).sort((a,b)=>(a.numero||0)-(b.numero||0)); }
+function proyectosTodos(){ return S.proys.filter(p=>p.programaId===S.progId).sort((a,b)=>(a.numero||0)-(b.numero||0)); }
+/* proyectos() respeta el filtro de período; proyectosTodos() ve la cartera completa. */
+function proyectos(){
+  const all=proyectosTodos(); if(!S.anio) return all;
+  const Y=+S.anio, pg=prog();
+  const ps=all.filter(p=>motivosAnio(p,pg,Y).length);
+  return (S.crit.corte && Y<ANIO_HOY)? ps.map(p=>alCorte(p,Y)) : ps;
+}
+
+/* ---------- período (filtro por año) ---------- */
+const ANIO_HOY=new Date().getFullYear();
+S.anio=""; S.crit={hechas:true,programadas:true,pendientes:true,corte:true};
+function anioDe(f){ const m=String(f==null?"":f).match(/^(\d{4})/); return m? +m[1] : null; }
+/* Todo lo que tiene fecha en la ficha de una persona. */
+function eventosDe(p,pg){
+  const ev=[], hoy=todayISO();
+  const nE={}, nB={};
+  ((pg&&pg.etapas)||[]).forEach(e=>nE[e.id]=e.nombre);
+  ((pg&&pg.bloques)||[]).forEach(b=>nB[b.id]=b.nombre);
+  Object.keys(p.etapas||{}).forEach(k=>{ const v=p.etapas[k]; if(!v||!anioDe(v.fecha)||v.estado==="na") return;
+    const fut=v.fecha>hoy || (v.estado||"no")==="no";
+    ev.push({f:v.fecha,tipo:fut?"programada":"hecha",que:nE[k]||"Etapa"}); });
+  Object.keys(p.bloques||{}).forEach(k=>{ const v=p.bloques[k]; if(!v||!anioDe(v.fecha)||v.na) return;
+    const fut=v.fecha>hoy || !v.cargado;
+    ev.push({f:v.fecha,tipo:fut?"programada":"hecha",que:"Documento «"+(nB[k]||"bloque")+"»"}); });
+  const c=p.cc||{};
+  if(anioDe(c.fechaPost)) ev.push({f:c.fechaPost,tipo:"hecha",que:"Postulación"});
+  else if(/^\d{4}$/.test(String(c.anio||""))) ev.push({f:c.anio+"-01-01",tipo:"hecha",que:"Selección",soloAnio:true});
+  const um=p.at&&p.at.modulo&&p.at.modulo.ultimoMovimiento;
+  if(anioDe(um)) ev.push({f:um,tipo:um>hoy?"programada":"hecha",que:"Movimiento en carpetas"});
+  return ev;
+}
+/* Pendiente = le quedan etapas por cerrar y no figura cerrado ni con renuncia. */
+function esPendiente(p,pg){
+  if(/^cerrado( al 100%)?$|renuncia/i.test(String(p.estado||"").trim())) return false;
+  return avEtapas(p,pg)<1;
+}
+function etapasPendientes(p,pg){
+  return ((pg&&pg.etapas)||[]).filter(e=>{ const v=(p.etapas||{})[e.id]||{}; return v.estado!=="na" && v.estado!=="completa"; }).length;
+}
+function fechaEv(e){ return e.soloAnio? "año "+anioDe(e.f) : fmtDate(e.f); }
+/* Por qué una persona entra en el período Y (lista vacía = queda fuera). */
+function motivosAnio(p,pg,Y){
+  const out=[], ev=eventosDe(p,pg).filter(e=>anioDe(e.f)===Y);
+  const h=ev.filter(e=>e.tipo==="hecha"), pr=ev.filter(e=>e.tipo==="programada");
+  const lista=a=>a.slice(0,3).map(e=>e.que+" ("+fechaEv(e)+")").join(", ")+(a.length>3?" y "+(a.length-3)+" más":"");
+  if(S.crit.hechas && h.length) out.push({t:"hecha",txt:h.length+(h.length>1?" tareas hechas: ":" tarea hecha: ")+lista(h)});
+  if(S.crit.programadas){
+    if(pr.length) out.push({t:"programada",txt:pr.length+(pr.length>1?" tareas programadas: ":" tarea programada: ")+lista(pr)});
+    else if(pg && anioDe(pg.plazo)===Y && esPendiente(p,pg)) out.push({t:"programada",txt:"Debe cerrar antes del plazo del programa ("+fmtDate(pg.plazo)+")"});
+  }
+  if(S.crit.pendientes && Y===ANIO_HOY && esPendiente(p,pg)){
+    const n=etapasPendientes(p,pg);
+    out.push({t:"pendiente",txt:n? n+(n>1?" etapas pendientes":" etapa pendiente") : "Proceso sin terminar"});
+  }
+  return out;
+}
+/* Copia de la ficha tal como estaba al 31 de diciembre del año Y (solo para mostrar). */
+function alCorte(p,Y){
+  const lim=Y+"-12-31", c=Object.assign({},p,{etapas:{},bloques:{}});
+  Object.keys(p.etapas||{}).forEach(k=>{ const v=p.etapas[k];
+    c.etapas[k]=(v&&v.fecha&&v.fecha>lim&&v.estado!=="na")? Object.assign({},v,{estado:"no"}) : v; });
+  Object.keys(p.bloques||{}).forEach(k=>{ const v=p.bloques[k];
+    c.bloques[k]=(v&&v.fecha&&v.fecha>lim&&!v.na)? Object.assign({},v,{cargado:false}) : v; });
+  return c;
+}
+function aniosDisponibles(){
+  const pg=prog(), s=new Set([ANIO_HOY]);
+  proyectosTodos().forEach(p=>eventosDe(p,pg).forEach(e=>{ const y=anioDe(e.f); if(y>=2000 && y<=ANIO_HOY+5) s.add(y); }));
+  const yp=anioDe(pg&&pg.plazo); if(yp) s.add(yp);
+  return [...s].sort((a,b)=>b-a);
+}
+function guardarPeriodo(){ try{ localStorage.setItem("egis.periodo",JSON.stringify({anio:S.anio,crit:S.crit})); }catch(e){} }
+function setAnio(v){ S.anio=v? String(v) : ""; guardarPeriodo(); render(); pintarRevision(); }
+function setCrit(k,v){ S.crit[k]=!!v; guardarPeriodo(); render(); pintarRevision(); }
 function esNA(v){ return !!v && (v.estado==="na" || v.na===true); }
 function avEtapas(p,pg){
   const et = pg && pg.etapas || []; if(!et.length) return 0;
@@ -537,20 +621,41 @@ function render(){
   renderPlazo(pg);
   renderFresco(pg);
   renderProgSel();
+  renderAnioSel();
   const v = $("#view");
   if(!S.ready){ v.innerHTML = '<div class="empty">Cargando datos…</div>'; return; }
   if(!pg){ v.innerHTML = vistaVacia(); return; }
-  v.innerHTML = ({panel:vPanel,proyectos:vProyectos,etapas:vEtapas,docs:vDocs,avtec:vAvanceTecnico,avsoc:vAvanceSocial,cartera:vCartera,evaluacion:vEval,fuentes:vFuentes,reportes:vReportes,config:vConfig})[S.view](pg);
+  v.innerHTML = bannerPeriodo(pg) + ({panel:vPanel,proyectos:vProyectos,etapas:vEtapas,docs:vDocs,avtec:vAvanceTecnico,avsoc:vAvanceSocial,cartera:vCartera,evaluacion:vEval,fuentes:vFuentes,reportes:vReportes,config:vConfig})[S.view](pg);
   if(!S.dl) v.querySelectorAll("[data-dl]").forEach(b=>b.remove());
   if(S.view==="panel") dibujarGraficos(pg);
   if(S.view==="reportes") dibujarGraficosReporte(pg);
 }
+function renderAnioSel(){
+  const s=$("#anioSel"); if(!s) return;
+  if(!S.ready || !prog()){ s.innerHTML='<option value="">Todos los años</option>'; return; }
+  const ys=aniosDisponibles();
+  if(S.anio && !ys.includes(+S.anio)) ys.push(+S.anio), ys.sort((a,b)=>b-a);
+  s.innerHTML='<option value="">Todos los años</option>'+ys.map(y=>'<option value="'+y+'"'+(String(y)===S.anio?" selected":"")+'>Período '+y+(y===ANIO_HOY?" (actual)":"")+'</option>').join("");
+  $("#anioBox").classList.toggle("on",!!S.anio);
+  const rb=$("#revFiltroBtn"); if(rb) rb.style.display = S.anio? "none" : "";
+}
+function bannerPeriodo(pg){
+  if(!S.anio || ["config","fuentes","evaluacion"].includes(S.view)) return "";
+  const Y=+S.anio, tot=proyectosTodos().length, n=proyectos().length;
+  const crit=[S.crit.hechas&&"tareas hechas",S.crit.programadas&&"programadas",S.crit.pendientes&&Y===ANIO_HOY&&"pendientes"].filter(Boolean);
+  const corte = S.crit.corte && Y<ANIO_HOY;
+  return `<div class="banner noprint" style="border-color:var(--accent-line);background:var(--accent-soft);flex-wrap:wrap">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" style="flex:none"><rect x="1.8" y="3" width="12.4" height="11" rx="1.5"/><path d="M1.8 6.6h12.4M5 1.6v2.8M11 1.6v2.8"/></svg>
+    <span style="flex:1;min-width:220px"><b>Período ${Y}:</b> ${n} de ${tot} personas, las que tienen ${crit.length? crit.join(", ").replace(/, ([^,]*)$/," o $1") : "(ningún criterio activo)"} en ${Y}.${corte?" El avance se muestra como estaba al 31-12-"+Y+".":""}</span>
+    <button class="btn sm" onclick="abrirRevisarFiltro()">Revisar filtro</button>
+    <button class="btn sm" onclick="setAnio('')">Ver todos los años</button></div>`;
+}
 function navGate(pg){
-  const ps = pg? proyectos() : [];
+  const ps = pg? proyectosTodos() : [];
   const tieneCC   = ps.some(p=>p.cc && Object.keys(p.cc).length);
   const tieneAT   = ps.some(p=>p.at && p.at.obra);
   const tieneSOC  = ps.some(p=>p.soc);
-  const vis = {cartera:tieneCC, avtec:tieneAT, avsoc:tieneSOC};
+  const vis = {cartera:false, avtec:tieneAT, avsoc:tieneSOC};   // pestaña Cartera crítica oculta a pedido
   document.querySelectorAll(".navbtn").forEach(b=>{
     const k=b.dataset.v;
     if(k in vis) b.style.display = vis[k]? "" : "none";
@@ -664,7 +769,9 @@ function filaFaseAbierta(ps,k,cols){
 }
 function vPanel(pg){
   const ps=proyectos(), n=ps.length;
-  if(!n) return '<div class="panel"><div class="empty">Esta cartera todavía no tiene beneficiarios cargados.</div></div>';
+  if(!n) return S.anio
+    ? '<div class="panel"><div class="empty">Nadie en esta cartera tiene tareas hechas, programadas o pendientes en '+esc(S.anio)+'.<br><button class="btn sm" style="margin-top:10px" onclick="abrirRevisarFiltro()">Revisar filtro</button></div></div>'
+    : '<div class="panel"><div class="empty">Esta cartera todavía no tiene beneficiarios cargados.</div></div>';
   const avg = ps.reduce((s,p)=>s+avanceGeneral(p,pg),0)/n;
   const avgD = ps.reduce((s,p)=>s+avDocs(p,pg),0)/n;
   const d = diasPlazo(pg);
@@ -1107,7 +1214,7 @@ function vReportes(pg){
     <div class="pad" style="border-bottom:1px solid var(--line)">
       <div class="eyebrow">Informe de avance · ${esc(pg.codigo||"")}</div>
       <h3 style="font-size:21px;margin:5px 0 3px">${esc(pg.nombre)}</h3>
-      <div style="color:var(--ink-3);font-size:12.5px">Emitido el ${hoy} · ${n} proyectos · ${Object.keys(g).length} comunas${pg.plazo?" · plazo comprometido "+fmtDate(pg.plazo):""}</div>
+      <div style="color:var(--ink-3);font-size:12.5px">Emitido el ${hoy}${S.anio?" · <b>período "+esc(S.anio)+"</b>":""} · ${n} proyectos · ${Object.keys(g).length} comunas${pg.plazo?" · plazo comprometido "+fmtDate(pg.plazo):""}</div>
     </div>
     <div class="pad">
       <p style="margin:0 0 10px;max-width:68ch;font-size:14.5px;line-height:1.62">
@@ -1221,7 +1328,7 @@ function copiarResumen(){
   const avg=n?ps.reduce((s,p)=>s+avanceGeneral(p,pg),0)/n:0, avgD=n?ps.reduce((s,p)=>s+avDocs(p,pg),0)/n:0;
   const d=diasPlazo(pg);
   const t=[pg.nombre,
-    "Corte al "+new Date().toLocaleDateString("es-CL"),
+    "Corte al "+new Date().toLocaleDateString("es-CL")+(S.anio?" · período "+S.anio:""),
     "Avance de etapas: "+pct(avg)+"%  |  Completitud documental: "+pct(avgD)+"%",
     "Proyectos: "+n+" ("+ps.filter(p=>avanceGeneral(p,pg)>=1).length+" cerrados, "+ps.filter(p=>avanceGeneral(p,pg)<.34).length+" bajo 34%)",
     d===null? "Plazo sin definir" : (d<0? "Plazo vencido hace "+Math.abs(d)+" días" : "Quedan "+d+" días para el plazo comprometido")].join("\n");
@@ -1249,14 +1356,14 @@ function exportarCSV(){
     .concat(et.map(e=>EST[((p.etapas||{})[e.id]||{}).estado||"no"].lab))
     .concat(bl.map(b=>((p.bloques||{})[b.id]||{}).cargado?"Cargado":"Pendiente"))
     .concat([p.obs||"", p.updatedAt? new Date(p.updatedAt).toLocaleString("es-CL"):""]));
-  bajarCSV("avance_"+(pg.codigo||"programa")+"_"+todayISO()+".csv",[head].concat(rows));
+  bajarCSV("avance_"+(pg.codigo||"programa")+(S.anio?"_periodo"+S.anio:"")+"_"+todayISO()+".csv",[head].concat(rows));
 }
 function exportarCSVEtapas(){
   const pg=prog(), ps=proyectos(), et=pg.etapas||[];
   const rows=[["N°","Código","Comuna","Postulante","Estado declarado","Etapa","Estado","Fecha","Responsable","Respaldo / nota original"]];
   ps.forEach(p=> et.forEach(e=>{ const v=(p.etapas||{})[e.id]||{};
     rows.push([p.numero,p.codigo,p.comuna,p.postulante,p.estado,e.nombre,EST[v.estado||"no"].lab,v.fecha||"",v.responsable||"",v.respaldo||""]); }));
-  bajarCSV("etapas_detalle_"+(pg.codigo||"programa")+"_"+todayISO()+".csv",rows);
+  bajarCSV("etapas_detalle_"+(pg.codigo||"programa")+(S.anio?"_periodo"+S.anio:"")+"_"+todayISO()+".csv",rows);
 }
 </script>
 <script>
@@ -1402,7 +1509,7 @@ async function crearProyecto(datos){
 }
 async function nuevoProyecto(){
   const n=prompt("Nombre del postulante:"); if(!n) return;
-  const max=Math.max(0,...proyectos().map(p=>p.numero||0));
+  const max=Math.max(0,...proyectosTodos().map(p=>p.numero||0));
   const p=await crearProyecto({postulante:n.trim(),numero:max+1});
   render(); if(p) abrir(p.id);
 }
@@ -2761,7 +2868,7 @@ function abrirGuia(){
 }
 
 function abrirImportador(){
-  const m=$("#modal");
+  const m=$("#modal"); m.style.width=""; m.dataset.vista="importar";
   m.innerHTML=`
    <header><div style="flex:1"><div class="eyebrow">Sincronizar desde Excel</div><h3>Importar planilla</h3></div>
      <button class="x" onclick="cerrarModal()" aria-label="Cerrar">×</button></header>
@@ -2901,11 +3008,80 @@ async function exportarPlanilla(){
 </script>
 
 <script>
+/* ---------------- REVISAR FILTRO DE PERÍODO ---------------- */
+const MOT_COL={hecha:"var(--good)",programada:"var(--s1)",pendiente:"var(--warn)"};
+const MOT_LAB={hecha:"Hecha",programada:"Programada",pendiente:"Pendiente"};
+function abrirRevisarFiltro(){
+  if(!prog()){ aviso("Primero carga un programa."); return; }
+  const m=$("#modal");
+  m.style.width="min(780px,94vw)"; m.dataset.vista="periodo";
+  m.classList.add("on"); m.setAttribute("aria-hidden","false"); $("#scrim2").classList.add("on");
+  pintarRevision();
+}
+function pintarRevision(){
+  const m=$("#modal"); if(!m.classList.contains("on") || m.dataset.vista!=="periodo") return;
+  const pg=prog(); if(!pg) return;
+  const Y=S.anio? +S.anio : ANIO_HOY;
+  const all=proyectosTodos();
+  const filas=all.map(p=>({p,m:motivosAnio(p,pg,Y)}));
+  const dentro=filas.filter(x=>x.m.length), fuera=filas.filter(x=>!x.m.length);
+  const cuenta=t=>dentro.filter(x=>x.m.some(o=>o.t===t)).length;
+  const ys=aniosDisponibles();
+  const pasado=Y<ANIO_HOY;
+  const ultimo=p=>{ const a=eventosDe(p,pg).map(e=>anioDe(e.f)).filter(Boolean); return a.length? Math.max(...a) : null; };
+  const chk=(k,t,d,dis)=>`<label class="critrow"${dis?' style="opacity:.55;cursor:default"':""}><input type="checkbox" ${S.crit[k]?"checked":""} ${dis?"disabled":""} onchange="setCrit('${k}',this.checked)"><span><span class="t">${t}</span><br><span class="d">${d}</span></span></label>`;
+  m.dataset.vista="periodo";
+  m.innerHTML=`
+   <header id="revFiltro"><div style="flex:1"><div class="eyebrow">${esc(pg.nombre)}</div><h3>Revisar filtro por período</h3></div>
+     <button class="x" onclick="cerrarModal()" aria-label="Cerrar">×</button></header>
+   <div class="mbody">
+     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+       <span style="font-size:13px;font-weight:600">Período</span>
+       <div class="seg" style="flex-wrap:wrap">${ys.map(y=>`<button class="${y===Y?"on completa":""}" onclick="setAnio(${y})">${y}</button>`).join("")}</div>
+       ${S.anio?"":`<span style="font-size:12px;color:var(--ink-3)">Ahora ves todos los años. Abajo está la vista previa de ${Y}.</span>`}
+     </div>
+     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">
+       ${chk("hechas","Tareas hechas en "+Y,"Etapas cerradas, documentos cargados, postulación o movimiento en carpetas con fecha de ese año.")}
+       ${chk("programadas","Tareas programadas para "+Y,"Etapas o documentos con fecha futura en ese año, o el plazo del programa si vence ese año y la persona no ha terminado.")}
+       ${chk("pendientes","Pendientes en "+ANIO_HOY,"Quienes todavía tienen etapas por cerrar. Solo cuenta para el año en curso; no entran los «Cerrado» ni las renuncias.",Y!==ANIO_HOY)}
+       ${chk("corte","Ver el avance como estaba al 31-12","Para años anteriores: las etapas cerradas después de ese año se muestran como no realizadas.",!pasado)}
+     </div>
+     <div class="diff">
+       <div><div class="k">Entran en ${Y}</div><div class="v">${dentro.length}<small style="font-size:13px;color:var(--ink-3)"> / ${all.length}</small></div></div>
+       <div><div class="k">Con tareas hechas</div><div class="v" style="color:var(--good)">${cuenta("hecha")}</div></div>
+       <div><div class="k">Con programadas</div><div class="v" style="color:var(--s1)">${cuenta("programada")}</div></div>
+       <div><div class="k">Pendientes</div><div class="v" style="color:color-mix(in srgb,var(--warn) 70%,var(--ink))">${cuenta("pendiente")}</div></div>
+     </div>
+     <div>
+       <div class="eyebrow" style="margin-bottom:6px">Por qué entra cada persona · ${dentro.length}</div>
+       <div class="scroll" style="max-height:300px;border:1px solid var(--line);border-radius:6px"><table><tbody>
+         ${dentro.map(x=>`<tr><td style="min-width:190px;vertical-align:top"><button class="rowbtn" onclick="cerrarModal();abrir('${esc(x.p.id)}')">${esc(x.p.postulante)}</button>
+             <div style="font-size:11px;color:var(--ink-3)">${esc(x.p.comuna||"")}${x.p.estado?" · "+esc(x.p.estado):""}</div></td>
+           <td>${x.m.map(o=>`<div style="margin:1px 0"><span class="mot"><i style="background:${MOT_COL[o.t]}"></i>${MOT_LAB[o.t]}</span><span style="font-size:12px;color:var(--ink-2)">${esc(o.txt)}</span></div>`).join("")}</td></tr>`).join("")
+           || '<tr><td class="empty">Nadie cumple los criterios marcados en '+Y+'.</td></tr>'}
+       </tbody></table></div>
+     </div>
+     ${fuera.length?`<details><summary style="cursor:pointer;font-size:13px;font-weight:600">Quedan fuera · ${fuera.length} persona${fuera.length>1?"s":""}</summary>
+       <div class="scroll" style="max-height:220px;margin-top:6px;border:1px solid var(--line);border-radius:6px"><table><tbody>
+         ${fuera.map(x=>{ const u=ultimo(x.p); return `<tr><td>${esc(x.p.postulante)}</td><td style="font-size:12px;color:var(--ink-3)">${u? "última actividad con fecha: "+u : "sin fechas registradas"}${esPendiente(x.p,pg)?" · sigue pendiente":""}</td></tr>`;}).join("")}
+       </tbody></table></div></details>`:""}
+     <p style="margin:0;font-size:11.5px;color:var(--ink-3)">Las fechas salen de cada etapa y documento de la ficha, de la postulación (cartera crítica) y del último movimiento en carpetas. Lo que se registró sin fecha solo cuenta como pendiente.</p>
+   </div>
+   <footer>
+     ${S.anio?`<button class="btn" onclick="setAnio('');cerrarModal()">Ver todos los años</button>`:""}
+     ${S.anio?"":`<button class="btn pri" onclick="setAnio(${Y});cerrarModal()">Filtrar por ${Y}</button>`}
+     <button class="btn${S.anio?" pri":""}" onclick="cerrarModal()">Listo</button>
+   </footer>`;
+}
+</script>
+
+<script>
 /* ---------------- NAVEGACIÓN / ARRANQUE ---------------- */
 function ir(v){ S.view=v; syncNav(); render(); window.scrollTo({top:0}); }
 function syncNav(){ document.querySelectorAll(".navbtn").forEach(b=>b.classList.toggle("on", b.dataset.v===S.view)); }
 document.querySelectorAll(".navbtn[data-v]").forEach(b=> b.addEventListener("click",()=>ir(b.dataset.v)));
 $("#progSel").addEventListener("change",e=>{ S.progId=e.target.value; render(); });
+$("#anioSel").addEventListener("change",e=>setAnio(e.target.value));
 $("#scrim").addEventListener("click",cerrar);
 $("#scrim2").addEventListener("click",cerrarModal);
 $("#printBtn").addEventListener("click",()=>window.print());
@@ -2919,7 +3095,9 @@ $("#themeBtn").addEventListener("click",()=>{
   try{ localStorage.setItem("egis.tema",next); }catch(err){}
 });
 try{ const t=localStorage.getItem("egis.tema"); if(t) document.documentElement.setAttribute("data-theme",t);
-     S.autor=localStorage.getItem("egis.autor")||""; }catch(e){}
+     S.autor=localStorage.getItem("egis.autor")||"";
+     const per=JSON.parse(localStorage.getItem("egis.periodo")||"null");
+     if(per){ S.anio=per.anio? String(per.anio) : ""; Object.assign(S.crit, per.crit||{}); } }catch(e){}
 
 function ordenarProgs(){ S.progs.sort((a,b)=> String(a.nombre).localeCompare(String(b.nombre),"es")); }
 
