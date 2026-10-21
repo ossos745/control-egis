@@ -726,7 +726,18 @@ const TRAMOS=[
   {k:"ini", lab:"Recién iniciado",  col:"var(--serious)", test:a=>a>0&&a<.34},
   {k:"cero",lab:"Sin avance",       col:"var(--crit)",    test:a=>a<=0}
 ];
-function tramoDe(a){ return TRAMOS.find(t=>t.test(a)) || TRAMOS[4]; }
+/* Con Avance Técnico, el tramo sale del paso en que está la persona
+   (paso 3 «Ingresado en obra» ya es «A medio camino»), no del porcentaje. */
+const TRAMO_FASE={
+ "Sin iniciar":"cero", "Con ensayo de absorción":"ini",
+ "Ingresado en obra":"med", "Módulo abierto":"med",
+ "En obra y en módulo":"alt", "Módulo completo":"fin"
+};
+function tramoDe(a,p){
+  const k=TRAMO_FASE[faseDe(p)];
+  if(k) return TRAMOS.find(t=>t.k===k);
+  return TRAMOS.find(t=>t.test(a)) || TRAMOS[4];
+}
 
 /* Avance general por persona.
    La fase pone el piso y lo que hay dentro de las carpetas mueve el resto.
@@ -778,9 +789,9 @@ function vPanel(pg){
 
   const conAv = ps.map(p=>({p, a:avanceGeneral(p,pg), dd:avDocs(p,pg), det:detalleAvance(p,pg)}));
   const cuenta={}; TRAMOS.forEach(t=>cuenta[t.k]=0);
-  conAv.forEach(x=>cuenta[tramoDe(x.a).k]++);
+  conAv.forEach(x=>cuenta[tramoDe(x.a,x.p).k]++);
   const comp=cuenta.fin, cero=cuenta.cero, marcha=n-comp-cero;
-  const criticos = conAv.filter(x=>x.a<.34).sort((a,b)=>a.a-b.a);
+  const criticos = conAv.filter(x=>["ini","cero"].includes(tramoDe(x.a,x.p).k)).sort((a,b)=>a.a-b.a);
   const hayFases = ps.some(p=>faseDe(p));
   const pFase = hayFases? (avanceFases(ps)||0) : null;
   const cFase = {}; FASES.forEach(k=>cFase[k]=0);
@@ -802,7 +813,7 @@ function vPanel(pg){
   if(d!==null && d<0) alertas.push(["cr","!","El plazo se venció hace "+Math.abs(d)+" días","Quedan "+(n-comp)+" de "+n+" personas sin terminar su proceso."]);
   else if(d!==null && d<=45) alertas.push([d<=20?"cr":"wa",d,"Quedan "+d+" días de plazo","Hay "+(n-comp)+" personas todavía en proceso."]);
   if(cero) alertas.push(["cr",cero,cero+(cero>1?" personas no han empezado":" persona no ha empezado"),"No registran ninguna etapa iniciada de las "+(pg.etapas||[]).length+" del proceso."]);
-  if(criticos.length && criticos.length!==cero) alertas.push(["wa",criticos.length,criticos.length+" personas van bajo el 34%","Son las que arrastran el promedio de la cartera ("+pct(avg)+"%)."]);
+  if(criticos.length && criticos.length!==cero) alertas.push(["wa",criticos.length,criticos.length+" personas recién iniciadas o sin avance","Son las que arrastran el promedio de la cartera ("+pct(avg)+"%)."]);
   etapasCriticas.slice(0,2).forEach(x=>{ if(x.av<.25) alertas.push(["wa",x.c.no,
     x.c.no===n? "Nadie ha empezado «"+x.e.nombre+"»" : x.c.no+" personas detenidas en «"+x.e.nombre+"»",
     x.c.no===n? "Ninguna de las "+n+" personas registra avance en esa etapa." : "Es la etapa donde más gente está detenida."]); });
@@ -854,7 +865,7 @@ function vPanel(pg){
     <div class="scroll" style="max-height:620px"><table class="cards">
       <thead><tr><th style="width:38px">N°</th><th style="min-width:200px">Beneficiario</th><th>Comuna</th>${hayGrupo?"<th>Grupo</th>":""}<th class="num">Etapas listas</th><th>Próximo paso</th><th style="width:150px">Avance del proceso</th><th class="num" style="width:92px">Antecedentes<br>cargados</th>${hayEstado?"<th>Estado declarado</th>":""}${hayResp?"<th>Responsable</th>":""}</tr></thead>
       <tbody>${filas.map(x=>{
-        const t=tramoDe(x.a), ea=etapaActual(x.p,pg);
+        const t=tramoDe(x.a,x.p), ea=etapaActual(x.p,pg);
         return `<tr>
           <td class="mono tit-n" data-l="" style="color:var(--ink-3)">${esc(x.p.numero||"—")}</td>
           <td class="tit" data-l=""><button class="rowbtn" onclick="abrir('${esc(x.p.id)}')">${esc(x.p.postulante)}</button>
