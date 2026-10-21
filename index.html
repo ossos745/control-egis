@@ -779,7 +779,8 @@ function filaFaseAbierta(ps,k,cols){
   </td></tr>`;
 }
 function vPanel(pg){
-  const ps=proyectos(), n=ps.length;
+  const hayAT=proyectos().some(p=>p.at && p.at.obra), gAT=hayAT? grupoATActivo() : "";
+  const ps=proyectos().filter(p=>!gAT || grupoAT(p)===gAT), n=ps.length;
   if(!n) return S.anio
     ? '<div class="panel"><div class="empty">Nadie en esta cartera tiene tareas hechas, programadas o pendientes en '+esc(S.anio)+'.<br><button class="btn sm" style="margin-top:10px" onclick="abrirRevisarFiltro()">Revisar filtro</button></div></div>'
     : '<div class="panel"><div class="empty">Esta cartera todavía no tiene beneficiarios cargados.</div></div>';
@@ -829,22 +830,22 @@ function vPanel(pg){
   const hayEstado = ps.some(p=>p.estado);
   const hayResp = ps.some(p=>p.responsable);
 
-  return `
+  return (hayAT? filtroGrupoAT() : "") + `
   <div class="stats" style="margin-bottom:14px">
+    <div class="stat"><div class="k">Avance general</div><div class="v" style="color:${tonoPct(pct(avg))}">${pct(avg)}<small>%</small></div>
+      <div class="meter"><i style="width:${pct(avg)}%;background:${tonoPct(pct(avg))}"></i></div>
+      <div class="m">promedio de toda la cartera</div></div>
+    <div class="stat"><div class="k">Terminaron su proceso</div><div class="v" style="color:${comp?"var(--good)":"var(--ink)"}">${Math.round(comp/n*100)}<small>%</small></div>
+      <div class="meter"><i style="width:${Math.round(comp/n*100)}%;background:var(--good)"></i></div>
+      <div class="m">${comp} de ${n} personas</div></div>
     <div class="stat"><div class="k">Personas en la cartera</div><div class="v">${n}</div>
       <div class="m">${Object.keys(comunas).length} comuna${Object.keys(comunas).length>1?"s":""}${hayGrupo?" · "+grupos.size+" grupos":""}</div></div>
-    <div class="stat"><div class="k">Terminaron su proceso</div><div class="v" style="color:var(--good)">${comp}</div>
-      <div class="meter"><i style="width:${Math.round(comp/n*100)}%;background:var(--good)"></i></div>
-      <div class="m">${Math.round(comp/n*100)}% de la cartera</div></div>
     <div class="stat"><div class="k">En marcha</div><div class="v">${marcha}</div>
       <div class="meter"><i style="width:${Math.round(marcha/n*100)}%;background:var(--warn)"></i></div>
       <div class="m">Con al menos una etapa avanzada</div></div>
     <div class="stat"><div class="k">Sin empezar</div><div class="v" style="color:${cero?"var(--crit)":"var(--ink)"}">${cero}</div>
       <div class="meter"><i style="width:${Math.round(cero/n*100)}%;background:var(--crit)"></i></div>
       <div class="m">Ninguna etapa registrada</div></div>
-    <div class="stat"><div class="k">Avance general</div><div class="v" style="color:${tonoPct(pct(avg))}">${pct(avg)}<small>%</small></div>
-      <div class="meter"><i style="width:${pct(avg)}%;background:${tonoPct(pct(avg))}"></i></div>
-      <div class="m">promedio de toda la cartera</div></div>
     <div class="stat"><div class="k">Plazo comprometido</div><div class="v">${d===null?"—":(d<0?"−"+Math.abs(d):d)}<small>${d===null?"":" días"}</small></div>
       <div class="m">${pg.plazo? fmtDate(pg.plazo) : "Sin definir"}</div></div>
   </div>
@@ -2805,7 +2806,7 @@ let PLAN=null;
 const GUIAS = {
  panel:{t:"Panel de control",
   q:"La foto de la cartera completa en una pantalla: cuánta gente hay, cuántos terminaron, quién va atrasado y qué alerta hay que mirar hoy.",
-  p:[["Los recuadros de arriba","Personas en la cartera, cuántas terminaron, cuántas van en marcha y cuántas no han empezado. Si la cartera tiene fases, también el avance por fases."],
+  p:[["Los recuadros de arriba","Primero el avance general y el porcentaje que terminó; después personas en la cartera, cuántas van en marcha y cuántas no han empezado. Si la cartera tiene fases, también el avance por fases."],
      ["Las fases","Cada persona está en una sola fase: la más alta que alcanzó. La tabla muestra cuántas personas hay en cada una y qué porcentaje de la cartera representan; al hacer clic en una fase se despliegan los nombres."],
      ["Avance del proceso","No es solo el conteo de etapas: la fase alcanzada pone un piso y los documentos cargados suben el resto. Por eso alguien que ya tiene el ensayo de absorción no marca 0."],
      ["Cómo va cada persona","La barra de colores reparte a los beneficiarios por tramo de avance. Abajo, la tabla los ordena de menor a mayor avance: los que están peor salen primero, a propósito."],
