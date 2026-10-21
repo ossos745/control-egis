@@ -1411,6 +1411,15 @@ function pintarDrawer(){
        </div>
      </div>
 
+     <div class="panel"><header><h3>Antecedentes cargados</h3><span class="hint">${bl.filter(b=>((p.bloques||{})[b.id]||{}).cargado).length} de ${bl.filter(b=>!((p.bloques||{})[b.id]||{}).na).length}${bl.filter(b=>((p.bloques||{})[b.id]||{}).na).length?" · "+bl.filter(b=>((p.bloques||{})[b.id]||{}).na).length+" no corresponden":""}</span></header>
+       <div class="pad"><div class="docgrid">${bl.map(b=>{
+         const v=(p.bloques||{})[b.id]||{}, on=!!v.cargado, na=!!v.na;
+         return `<label class="doc ${na?"na":(on?"on":"")}" title="Un clic recorre pendiente → cargado → no corresponde"><input type="checkbox" ${on?"checked":""} ${na?"disabled":""} onchange="toggleBloque('${esc(p.id)}','${esc(b.id)}');pintarDrawer()">
+           ${na?`<button type="button" style="all:unset;cursor:pointer;color:var(--crit);font-weight:700;flex:none;line-height:1" title="Volver a pendiente" onclick="event.preventDefault();toggleBloque('${esc(p.id)}','${esc(b.id)}');pintarDrawer()">✕</button>`:""}
+           <span><span class="t">${esc(b.nombre)}${na?'<span class="na-tag">no corresponde</span>':""}</span><span class="d">${esc(na&&v.obs?v.obs:(b.descripcion||""))}</span></span></label>`;
+       }).join("")}</div></div>
+     </div>
+
      <div class="panel"><header><h3>Etapas del proyecto</h3><span class="hint">${et.filter(e=>(((p.etapas||{})[e.id]||{}).estado)==="completa").length} de ${et.filter(e=>(((p.etapas||{})[e.id]||{}).estado)!=="na").length} completas${et.filter(e=>(((p.etapas||{})[e.id]||{}).estado)==="na").length?" · "+et.filter(e=>(((p.etapas||{})[e.id]||{}).estado)==="na").length+" no corresponden":""}</span></header>
        <div class="pad stagelist">${et.map(e=>{
          const v=(p.etapas||{})[e.id]||{}, st=v.estado||"no";
@@ -1424,15 +1433,6 @@ function pintarDrawer(){
              `<button class="${st===k?"on "+k:""}" title="${k==="na"?"El documento no aplica a este beneficiario: sale del cálculo del porcentaje":""}" onclick="etapaCampo('${esc(p.id)}','${esc(e.id)}','estado','${k}')">${k==="na"?"No corresponde":EST[k].lab}</button>`).join("")}</div>
          </div>`;
        }).join("")}</div>
-     </div>
-
-     <div class="panel"><header><h3>Antecedentes cargados</h3><span class="hint">${bl.filter(b=>((p.bloques||{})[b.id]||{}).cargado).length} de ${bl.filter(b=>!((p.bloques||{})[b.id]||{}).na).length}${bl.filter(b=>((p.bloques||{})[b.id]||{}).na).length?" · "+bl.filter(b=>((p.bloques||{})[b.id]||{}).na).length+" no corresponden":""}</span></header>
-       <div class="pad"><div class="docgrid">${bl.map(b=>{
-         const v=(p.bloques||{})[b.id]||{}, on=!!v.cargado, na=!!v.na;
-         return `<label class="doc ${na?"na":(on?"on":"")}" title="Un clic recorre pendiente → cargado → no corresponde"><input type="checkbox" ${on?"checked":""} ${na?"disabled":""} onchange="toggleBloque('${esc(p.id)}','${esc(b.id)}');pintarDrawer()">
-           ${na?`<button type="button" style="all:unset;cursor:pointer;color:var(--crit);font-weight:700;flex:none;line-height:1" title="Volver a pendiente" onclick="event.preventDefault();toggleBloque('${esc(p.id)}','${esc(b.id)}');pintarDrawer()">✕</button>`:""}
-           <span><span class="t">${esc(b.nombre)}${na?'<span class="na-tag">no corresponde</span>':""}</span><span class="d">${esc(na&&v.obs?v.obs:(b.descripcion||""))}</span></span></label>`;
-       }).join("")}</div></div>
      </div>
 
      <div style="display:flex;gap:8px;padding-bottom:20px">
@@ -1558,7 +1558,37 @@ function avanceFases(ps){
   return v.length? Math.round(v.reduce((a,b)=>a+b,0)/v.length) : null;
 }
 
-function atDe(){ return proyectos().filter(p=>p.at && p.at.obra); }
+/* Grupos del Avance Técnico. Para sumar un grupo nuevo, agrega una línea:
+   «nombre» es lo que se ve en el filtro y «alias» los valores del campo grupo
+   que trae la sincronización para esas personas. Quien traiga un grupo que no
+   está en la lista aparece igual en el filtro con su propio nombre; quien no
+   traiga grupo cae en el primero de la lista. */
+const GRUPOS_AT=[
+ {nombre:"Cartera Crítica 2026", alias:["Cartera crítica CC","Cartera crítica 2026","Cartera crítica"]}
+];
+function grupoAT(p){
+  const g=String((p&&p.grupo)||"").trim();
+  if(!g) return GRUPOS_AT[0].nombre;
+  const k=g.toLowerCase();
+  const x=GRUPOS_AT.find(o=>o.nombre.toLowerCase()===k || (o.alias||[]).some(a=>a.toLowerCase()===k));
+  return x? x.nombre : g;
+}
+function gruposAT(){
+  const usados=new Set(proyectos().filter(p=>p.at && p.at.obra).map(grupoAT));
+  return [...GRUPOS_AT.map(o=>o.nombre).filter(n=>usados.has(n)), ...[...usados].filter(n=>!GRUPOS_AT.some(o=>o.nombre===n)).sort()];
+}
+S.grupoAT=(()=>{ try{ const v=localStorage.getItem("egis.grupoAT"); return v==null? GRUPOS_AT[0].nombre : v; }catch(e){ return GRUPOS_AT[0].nombre; } })();
+function setGrupoAT(v){ S.grupoAT=v; try{localStorage.setItem("egis.grupoAT",v);}catch(e){} render(); }
+function grupoATActivo(){ const gs=gruposAT(); return (S.grupoAT && gs.includes(S.grupoAT))? S.grupoAT : ""; }
+function atDe(){ const g=grupoATActivo(); return proyectos().filter(p=>p.at && p.at.obra && (!g || grupoAT(p)===g)); }
+function filtroGrupoAT(){
+  const gs=gruposAT(), g=grupoATActivo();
+  if(!gs.length) return "";
+  return `<div class="toolbar noprint">
+    <label style="font-size:12.5px;color:var(--ink-2)">Grupo</label>
+    <select onchange="setGrupoAT(this.value)">${gs.map(n=>`<option${n===g?" selected":""}>${esc(n)}</option>`).join("")}<option value=""${g?"":" selected"}>Todos los grupos</option></select>
+  </div>`;
+}
 function cuadro(st){
   if(st==="na") return '<i class="nabox" title="No corresponde"></i>';
   const col= st==="completa"?"var(--good)" : st==="parcial"?"var(--warn)" : "var(--surface-3)";
@@ -1728,7 +1758,7 @@ function bajarSocial(){
 
 function vAvanceTecnico(pg){
   const ps=atDe();
-  if(!ps.length) return '<div class="panel"><div class="empty">Esta cartera no tiene beneficiarios con avance técnico medido.</div></div>';
+  if(!ps.length) return filtroGrupoAT()+'<div class="panel"><div class="empty">Esta cartera no tiene beneficiarios con avance técnico medido.</div></div>';
   const n=ps.length;
   const enObra=ps.filter(p=>p.at.obra.ingresado).length;
   const enMod=ps.filter(p=>p.at.modulo.ingresado).length;
@@ -1832,14 +1862,15 @@ function vAvanceTecnico(pg){
       </div>
     </div>`;}).join("");
 
-  return `
+  const pTerm=Math.round(enUltima/n*100);
+  return filtroGrupoAT() + `
   <div class="stats" style="margin-bottom:14px">
-    <div class="stat"><div class="k">Avance técnico global</div><div class="v" style="color:${tonoPct(global)}">${global}<small>%</small></div>
+    <div class="stat"><div class="k">Avance general</div><div class="v" style="color:${tonoPct(global)}">${global}<small>%</small></div>
       <div class="meter"><i style="width:${global}%;background:${tonoPct(global)}"></i></div>
       <div class="m">la fase pone el piso y los documentos suben el resto</div></div>
-    <div class="stat"><div class="k">Expedientes terminados</div><div class="v" style="color:${enUltima?"var(--good)":"var(--ink)"}">${enUltima}<small>/${n}</small></div>
-      <div class="meter"><i style="width:${Math.round(enUltima/n*100)}%;background:var(--good)"></i></div>
-      <div class="m">llegaron a «${esc(FASES[FASES.length-1])}»</div></div>
+    <div class="stat"><div class="k">Expedientes terminados</div><div class="v" style="color:${enUltima?"var(--good)":"var(--ink)"}">${pTerm}<small>%</small></div>
+      <div class="meter"><i style="width:${pTerm}%;background:var(--good)"></i></div>
+      <div class="m">${enUltima} de ${n} llegaron a «${esc(FASES[FASES.length-1])}»</div></div>
     <div class="stat"><div class="k">Ingresados en obra</div><div class="v">${enObra}<small>/${n}</small></div>
       <div class="meter"><i style="width:${enObra/n*100}%;background:${tonoPct(enObra/n*100)}"></i></div>
       <div class="m">avance documental ${pObra}%</div></div>
